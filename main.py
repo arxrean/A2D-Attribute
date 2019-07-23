@@ -32,6 +32,9 @@ def p_parse():
 
 def main():
     transform_dict = {'train': None, 'val': None}
+    # (N,t,c,m,n)
+    for iter,pack in enumerate(loader):
+        pass
 
 
 if __name__ == '__main__':
