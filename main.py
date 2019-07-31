@@ -18,6 +18,7 @@ def p_parse():
     parser.add_argument(
         "--a2d_root", default='/mnt/lustre/jiangsu/dlar/home/zyk17/data/A2D/Release', type=str)
     parser.add_argument('--csv_path', default='./repo/newVideoSet.csv')
+    parser.add_argument('--t', type=int, default=0)
     # config
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--batch_size", default=16, type=int)
@@ -40,10 +41,12 @@ def main():
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
-    dataset = A2DClassification(args, train_img_transform)
-    for iter, pack in enumerate(loader):
-        imgs = pack[0]  # (N,t,c,m,n)
-        labels = pack[1]  # (N,t,c,m,n)
+    train_dataset = A2DClassification(args, train_img_transform)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
+                              pin_memory=True, drop_last=False, shuffle=False)
+    for iter, pack in enumerate(train_loader):
+        imgs = pack[1]  # (N,t,c,m,n)
+        labels = pack[2]  # (N,t,c,m,n)
 
 
 if __name__ == '__main__':

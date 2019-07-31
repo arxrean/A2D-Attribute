@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
-
+import os
 
 
 class A2DClassification(Dataset):
@@ -30,33 +30,27 @@ class A2DClassification(Dataset):
 
     def __getitem__(self, index):
         t = self.args.t
-        rootPath = self.args.rootPath       
+        rootPath = self.args.a2d_root
         item = self.csv.loc[index]
-        
+
         video_name = item['img_id'].split('/')[1]
-        
+
         if t == 0:
-            img = Image.open(rootPath + item['img_id'])
+            img = Image.open(os.path.join(rootPath, item['img_id']))
             img = self.transform(img)
         else:
             img = []
             img_frame = int(item['img_id'].split('/')[-1].split('.')[0])
             for i in range(-t, t+1):
                 t_img_name = str(img_frame + i).zfill(5)
-                t_img = Image.open(rootPath + 'pngs320H' + '/' + video_name+ '/' + t_img_name + '.png')
-                t_img = self.transform(t_img)                
+                t_img = Image.open(os.path.join(
+                    rootPath, 'pngs320H', video_name, t_img_name + '.png'))
+                t_img = self.transform(t_img)
                 img.append(t_img)
-        
+
         label = item['label']
-        
-        return img, label, video_name
-        
+
+        return item['img_id'], img, label
+
     def __len__(self):
         return len(self.csv)
-    
-    
-    
-    
-    
-    
-    
