@@ -29,29 +29,27 @@ class A2DClassification(Dataset):
         self.csv.reset_index(drop=True, inplace=True)
 
     def __getitem__(self, index):
-        t = self.arg.t
-        rootPath = self.arg.rootPath       
+        t = self.args.t
+        rootPath = self.args.rootPath       
+        item = self.csv.loc[index]
         
-        csv = pd.read_csv(rootPath + 'newVideoSet.csv')
-        item = csv.loc[index]
-        img = Image.open(rootPath + item['img_id'])
-        img = self.transform(img)
-        img_frame = int(item['img_id'].split('/')[-1].split('.')[0])
         video_name = item['img_id'].split('/')[1]
         
-        imgList = []
-        
-        for i in range(-t, t+1):
-            t_img_name = str(img_frame + i).zfill(5)
-            t_img = Image.open(rootPath + 'pngs320H' + '/' + video_name+ '/' + t_img_name + '.png')
-            t_img = self.transform(t_img)
-            
-            imgList.append(t_img)
+        if t == 0:
+            img = Image.open(rootPath + item['img_id'])
+            img = self.transform(img)
+        else:
+            img = []
+            img_frame = int(item['img_id'].split('/')[-1].split('.')[0])
+            for i in range(-t, t+1):
+                t_img_name = str(img_frame + i).zfill(5)
+                t_img = Image.open(rootPath + 'pngs320H' + '/' + video_name+ '/' + t_img_name + '.png')
+                t_img = self.transform(t_img)                
+                img.append(t_img)
         
         label = item['label']
-        is_train = item['is_train']
-    
-        return img, imgList, label, is_train
+        
+        return img, label, video_name
         
     def __len__(self):
         return len(self.csv)
