@@ -16,7 +16,8 @@ def p_parse():
     parser.add_argument("--session_name", default="a2d", type=str)
     # data
     parser.add_argument(
-        "--a2d_root", default='/', type=str)
+        "--a2d_root", default='/mnt/lustre/jiangsu/dlar/home/zyk17/data/A2D/Release', type=str)
+    parser.add_argument('--csv_path', default='./repo/newVideoSet.csv')
     # config
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--batch_size", default=16, type=int)
