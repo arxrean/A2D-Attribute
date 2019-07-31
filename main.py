@@ -8,6 +8,8 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 
+from loader.A2DClsLoader import A2DClassification
+
 
 def p_parse():
     parser = argparse.ArgumentParser()
@@ -31,12 +33,19 @@ def p_parse():
 
 
 def main():
-    transform_dict = {'train': None, 'val': None}
-    # (N,t,c,m,n)
-    for iter,pack in enumerate(loader):
-        pass
+    train_img_transform = transforms.Compose([
+        transforms.Resize((448, 448)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+
+    dataset = A2DClassification(args, train_img_transform)
+    for iter, pack in enumerate(loader):
+        imgs = pack[0]  # (N,t,c,m,n)
+        labels = pack[1]  # (N,t,c,m,n)
 
 
 if __name__ == '__main__':
     global args
     args = p_parse()
+    main()

@@ -8,10 +8,11 @@ Created on Fri Jul 26 14:21:00 2019
 import numpy as np
 import pandas as pd
 from PIL import Image
+from torch.utils.data import Dataset, DataLoader
 
 
 
-class FamousClassification(Dataset):
+class A2DClassification(Dataset):
     def __init__(self, args, transform=None, mode='train'):
         # img_id(dir_file),path,label,is_train
         self.args = args
