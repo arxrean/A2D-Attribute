@@ -10,7 +10,7 @@ import pandas as pd
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import os
-
+from keras.utils import to_categorical
 
 class A2DClassification(Dataset):
     def __init__(self, args, transform=None, mode='train'):
@@ -27,7 +27,15 @@ class A2DClassification(Dataset):
         else:
             self.csv = self.csv[self.csv['is_train'] == 2]
         self.csv.reset_index(drop=True, inplace=True)
-
+        
+        self.valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8, 
+                      22: 9, 26: 10, 28: 11, 29: 12, 34: 13, 35: 14, 36: 15, 39: 16, 
+                      41: 17, 43: 18, 44: 19, 45: 20, 46: 21, 48: 22, 49: 23, 54: 24,
+                      55: 25, 56: 26, 57: 27, 59: 28, 61: 29, 63: 30, 65: 31, 66: 32, 
+                      67: 33, 68: 34, 69: 35, 72: 36, 73: 37, 75: 38, 76: 39, 77: 40, 
+                      78: 41, 79: 42}
+        self.num_valid = len(self.valid)
+        
     def __getitem__(self, index):
         t = self.args.t
         rootPath = self.args.a2d_root
@@ -48,9 +56,29 @@ class A2DClassification(Dataset):
                 t_img = self.transform(t_img)
                 img.append(t_img)
 
-        label = item['label']
-
-        return item['img_id'], img, label
+        listlabel = item['label'].split(' ')
+        label = []
+        for i in listlabel:
+            i = int(float(i))
+            if i in self.valid:
+                label.append(self.valid[i])
+        
+        label = to_categorical(label, num_classes=self.num_valid)
+        
+        if len(label) == 1:
+            label = label[0]
+        
+        return img, label, video_name
 
     def __len__(self):
         return len(self.csv)
+
+
+
+
+
+
+
+
+
+
