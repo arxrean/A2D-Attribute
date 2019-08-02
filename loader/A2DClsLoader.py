@@ -34,7 +34,12 @@ class A2DClassification(Dataset):
                       55: 25, 56: 26, 57: 27, 59: 28, 61: 29, 63: 30, 65: 31, 66: 32, 
                       67: 33, 68: 34, 69: 35, 72: 36, 73: 37, 75: 38, 76: 39, 77: 40, 
                       78: 41, 79: 42}
+        self.actor = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6}
+        self.action = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8}
+        
         self.num_valid = len(self.valid)
+        self.num_actor = len(self.actor)
+        self.num_action = len(self.action)
         
     def __getitem__(self, index):
         item = self.csv.loc[index]
@@ -67,6 +72,70 @@ class A2DClassification(Dataset):
             label = label[0]
         
         return img, label, video_name
+
+    def __getitemActor__(self, index):
+        item = self.csv.loc[index]
+
+        video_name = item['img_id'].split('/')[1]
+
+        if self.args.t == 0:
+            img = Image.open(os.path.join(self.args.a2d_root, item['img_id']))
+            img = self.transform(img)
+        else:
+            img = []
+            img_frame = int(item['img_id'].split('/')[-1].split('.')[0])
+            for i in range(-self.args.t, self.args.t+1):
+                t_img_name = str(img_frame + i).zfill(5)
+                t_img = Image.open(os.path.join(
+                    self.args.a2d_root, 'pngs320H', video_name, t_img_name + '.png'))
+                t_img = self.transform(t_img)
+                img.append(t_img)
+
+        listlabel = item['label'].split(' ')
+        label = []
+        for i in listlabel:
+            i = int(float(i)) // 10
+            if i in self.actor:
+                label.append(self.actor[i])
+        
+        label = to_categorical(label, num_classes=self.num_actor)
+        
+        if len(label) == 1:
+            label = label[0]
+        
+        return img, label, video_name    
+
+    def __getitemAction__(self, index):
+        item = self.csv.loc[index]
+
+        video_name = item['img_id'].split('/')[1]
+
+        if self.args.t == 0:
+            img = Image.open(os.path.join(self.args.a2d_root, item['img_id']))
+            img = self.transform(img)
+        else:
+            img = []
+            img_frame = int(item['img_id'].split('/')[-1].split('.')[0])
+            for i in range(-self.args.t, self.args.t+1):
+                t_img_name = str(img_frame + i).zfill(5)
+                t_img = Image.open(os.path.join(
+                    self.args.a2d_root, 'pngs320H', video_name, t_img_name + '.png'))
+                t_img = self.transform(t_img)
+                img.append(t_img)
+
+        listlabel = item['label'].split(' ')
+        label = []
+        for i in listlabel:
+            i = int(float(i)) % 10
+            if i in self.action:
+                label.append(self.action[i])
+        
+        label = to_categorical(label, num_classes=self.num_action)
+        
+        if len(label) == 1:
+            label = label[0]
+        
+        return img, label, video_name 
 
     def __len__(self):
         return len(self.csv)
