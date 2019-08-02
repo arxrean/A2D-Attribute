@@ -37,22 +37,20 @@ class A2DClassification(Dataset):
         self.num_valid = len(self.valid)
         
     def __getitem__(self, index):
-        t = self.args.t
-        rootPath = self.args.a2d_root
         item = self.csv.loc[index]
 
         video_name = item['img_id'].split('/')[1]
 
-        if t == 0:
-            img = Image.open(os.path.join(rootPath, item['img_id']))
+        if self.args.t == 0:
+            img = Image.open(os.path.join(self.args.a2d_root, item['img_id']))
             img = self.transform(img)
         else:
             img = []
             img_frame = int(item['img_id'].split('/')[-1].split('.')[0])
-            for i in range(-t, t+1):
+            for i in range(-self.args.t, self.args.t+1):
                 t_img_name = str(img_frame + i).zfill(5)
                 t_img = Image.open(os.path.join(
-                    rootPath, 'pngs320H', video_name, t_img_name + '.png'))
+                    self.args.a2d_root, 'pngs320H', video_name, t_img_name + '.png'))
                 t_img = self.transform(t_img)
                 img.append(t_img)
 
