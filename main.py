@@ -42,8 +42,9 @@ def main():
     ])
 
     train_dataset = A2DClassification(args, train_img_transform)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0,
                               pin_memory=True, drop_last=False, shuffle=False)
+    
     for iter, pack in enumerate(train_loader):
         imgs = pack[1]  # (N,t,c,m,n)
         labels = pack[2]  # (N,t,c,m,n)
