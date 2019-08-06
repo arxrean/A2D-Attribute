@@ -71,10 +71,8 @@ class A2DClassification(Dataset):
         label = to_categorical(label, num_classes=self.num_valid)
         label = np.array(label)
         label = label.sum(axis=0)
-        
-        pdb.set_trace()
 
-        return img, label, item['img_id']
+        return item['img_id'], img, label
 
     def __len__(self):
         return len(self.csv)
@@ -130,52 +128,32 @@ class A2DClassificationWithActorAction(Dataset):
         label = []
         actor_label = []
         action_label = []
-        
+
         for i in listlabel:
             i = int(float(i))
             if i in self.valid:
                 label.append(self.valid[i])
             if i//10 in self.actor:
                 actor_label.append(self.actor[i//10])
-            if i%10 in self.action:
-                action_label.append(self.action[i%10])
-        
+            if i % 10 in self.action:
+                action_label.append(self.action[i % 10])
+
         label = to_categorical(label, num_classes=self.num_valid)
         label = np.array(label)
         label = label.sum(axis=0)
-        
+
         actor_label = to_categorical(actor_label, num_classes=self.num_actor)
         actor_label = np.array(actor_label)
         actor_label = actor_label.sum(axis=0)
-        
-        action_label = to_categorical(action_label, num_classes=self.num_action)
+
+        action_label = to_categorical(
+            action_label, num_classes=self.num_action)
         action_label = np.array(action_label)
         action_label = action_label.sum(axis=0)
-        
+
         pdb.set_trace()
 
         return img, label, actor_label, action_label, item['img_id']
 
     def __len__(self):
         return len(self.csv)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

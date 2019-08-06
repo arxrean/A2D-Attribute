@@ -34,15 +34,15 @@ def p_parse():
     return args
 
 
-def main():
+def main(args):
     train_img_transform = transforms.Compose([
-        transforms.Resize((448, 448)),
+        transforms.Resize((256, 256)),
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
     train_dataset = A2DClassification(args, train_img_transform)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0,
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
                               pin_memory=True, drop_last=False, shuffle=False)
     
     for iter, pack in enumerate(train_loader):
@@ -51,6 +51,5 @@ def main():
 
 
 if __name__ == '__main__':
-    global args
     args = p_parse()
-    main()
+    main(args)
