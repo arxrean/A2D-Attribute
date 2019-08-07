@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 from keras.utils import to_categorical
-import sys
 
 def joint_frac(embed_size=43):
     res = np.zeros(embed_size)
@@ -23,15 +22,20 @@ def joint_frac(embed_size=43):
             label = int(float(label))
             if label in valid:
                 labels.append(valid[label])
+            else:
+                print('label:%d in csv[%d] is not in valid'%(label, i))
         labels = to_categorical(labels, num_classes=embed_size)
         labels = labels.sum(axis=0)
         res += labels
-    res = res / sum(res)
     print(res)
-    
+    N = np.ones(embed_size) * num_items
+    res = res / (N-res)
+    print(res)
+
     np.save('./repo/joint_label_frac.npy', res)
 
     return res
     
 if __name__ == '__main__':
     res = joint_frac()
+    #joint_frac()
