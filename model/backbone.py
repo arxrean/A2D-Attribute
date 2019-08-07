@@ -1,6 +1,8 @@
 import torchvision.models as models
+import torch.nn as nn
 
-class res_block_50(args):
+
+def res_block_50(args):
     block = models.resnet50(args.pretrained)
 
     return nn.Sequential(

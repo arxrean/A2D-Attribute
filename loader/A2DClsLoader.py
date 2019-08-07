@@ -36,16 +36,11 @@ class A2DClassification(Dataset):
                       55: 25, 56: 26, 57: 27, 59: 28, 61: 29, 63: 30, 65: 31, 66: 32,
                       67: 33, 68: 34, 69: 35, 72: 36, 73: 37, 75: 38, 76: 39, 77: 40,
                       78: 41, 79: 42}
-        self.actor = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6}
-        self.action = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8}
 
         self.num_valid = len(self.valid)
-        self.num_actor = len(self.actor)
-        self.num_action = len(self.action)
 
     def __getitem__(self, index):
         item = self.csv.loc[index]
-
         video_name = item['img_id'].split('/')[1]
 
         if self.args.t == 0:
