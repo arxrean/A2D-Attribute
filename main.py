@@ -112,7 +112,7 @@ def joint_classification(args):
                 val_loss[-1] += loss.item()
 
         print('epoch:{} train_loss:{} val_loss:{}'.format(
-            epoch, train_loss[-1], val_loss[-1]))
+            epoch, train_loss[-1], val_loss[-1]), flush=True)
         snap_shot = {'epoch': epoch, 'train_loss': train_loss,
                      'val_loss': val_loss, 'state_dict': model.state_dict()}
         np.save('./save/joint_classification/snap/snap_{}/npy'.format(epoch), snap_shot)
