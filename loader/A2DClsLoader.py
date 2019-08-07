@@ -23,11 +23,9 @@ class A2DClassification(Dataset):
 
         self.mode = mode
         if self.mode == 'train':
-            self.csv = self.csv[self.csv['is_train'] == 1]
+            self.csv = self.csv[self.csv['usage'] == 0]
         elif self.mode == 'val':
-            self.csv = self.csv[self.csv['is_train'] == 0]
-        else:
-            self.csv = self.csv[self.csv['is_train'] == 2]
+            self.csv = self.csv[self.csv['usage'] == 1]
         self.csv.reset_index(drop=True, inplace=True)
 
         self.valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8,
@@ -81,11 +79,9 @@ class A2DClassificationWithActorAction(Dataset):
 
         self.mode = mode
         if self.mode == 'train':
-            self.csv = self.csv[self.csv['is_train'] == 1]
+            self.csv = self.csv[self.csv['usage'] == 0]
         elif self.mode == 'val':
-            self.csv = self.csv[self.csv['is_train'] == 0]
-        else:
-            self.csv = self.csv[self.csv['is_train'] == 2]
+            self.csv = self.csv[self.csv['usage'] == 1]
         self.csv.reset_index(drop=True, inplace=True)
 
         self.valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8,
