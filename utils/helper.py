@@ -3,9 +3,7 @@ import numpy as np
 # data format
 # The dimension of X_pre and X_gt are NXnum_cls, whether N is the number of samples and num_cls is the number of classes
 
-
 def Precision(X_pre, X_gt):
-
     N = len(X_pre)
     p = 0.0
     for i in range(N):
@@ -39,10 +37,17 @@ def get_eval(X_pre, X_gt):
     best_f1 = None
     best_prec = None
     best_recall = None
+    Threshold = None
+    for thd in np.arange(0, 1, 0.01):
+        X_pre_new = np.array(X_pre > thd, dtype='float64')
+        f1 = F1(X_pre_new, X_gt)
+        if best_f1 is None or f1 > best_f1:
+            best_f1 = f1
+            best_prec = Precision(X_pre_new, X_gt)
+            best_recall = Recall(X_pre_new, X_gt)
+            Threshold = thd
+    return best_f1, best_prec, best_recall, Threshold
 
-    for thd in np.arange(0, 1, 0.1):
-    	###############
-        pass
-        ###############
 
-    print('')
+if __name__ == '__main__':
+    pass
