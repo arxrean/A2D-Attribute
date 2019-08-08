@@ -119,7 +119,8 @@ def joint_classification(args):
             epoch, train_loss[-1], val_loss[-1]), flush=True)
         snap_shot = {'epoch': epoch, 'train_loss': train_loss,
                      'val_loss': val_loss, 'state_dict': model.state_dict()}
-        np.save('./save/joint_classification/snap/snap_{}.npy'.format(epoch), snap_shot)
+        torch.save(
+            snap_shot, './save/joint_classification/snap/snap_{}.pth.tar'.format(epoch))
 
 
 if __name__ == '__main__':
