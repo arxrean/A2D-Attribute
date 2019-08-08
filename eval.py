@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch import Tensor
 import numpy as np
 
-from utils.helper import calculateF1
+from utils.helper import Precision, Recall, F1
 from loader.A2DClsLoader import A2DClassification
 from model.net import getJointClassifier
 
@@ -54,10 +54,8 @@ def eval_joint_classification(args):
     if args.cuda:
         model = model.cuda()
 
-    tmp = torch.load(os.path.join(args.save_root,
-                               'joint_classification/snap/snap_19.npy'), map_location='cpu')
-    model.load_state_dict(torch.load(np.load(os.path.join(
-        args.save_root, 'joint_classification/snap/snap_19.npy'))['state_dict'], map_location='cpu'))
+    model.load_state_dict(torch.load(os.path.join(
+        args.save_root, 'joint_classification/snap/snap_19.pth.tar')['state_dict'], map_location='cpu'))
 
     total_res = []
     total_label = []
@@ -77,7 +75,11 @@ def eval_joint_classification(args):
 
     total_res = np.concatenate(total_res, axis=0)
     total_label = np.concatenate(total_label, axis=0)
-    calculateF1(total_res, total_label)
+    P = Precision(total_res, total_label)
+    R = Recall(total_res, total_label)
+    F = F1(total_res, total_label)
+    print('Precision: {:.1f} Recall: {:.1f} F1: {:.1f}'.format(
+        100 * P, 100 * R, 100 * F))
 
 
 if __name__ == '__main__':

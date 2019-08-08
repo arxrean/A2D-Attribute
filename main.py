@@ -27,7 +27,7 @@ def p_parse():
     # config
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--batch_size", default=64, type=int)
-    parser.add_argument("--max_epoches", default=20, type=int)
+    parser.add_argument("--max_epoches", default=1000, type=int)
     parser.add_argument("--cuda", default=False, type=bool)
     parser.add_argument("--pretrained", default=True, type=bool)
     # train
@@ -115,7 +115,7 @@ def joint_classification(args):
 
                 val_loss[-1] += loss.item()
 
-        print('epoch:{} train_loss:{} val_loss:{}'.format(
+        print('epoch:{} train_loss:{:.3f} val_loss:{:.4f}'.format(
             epoch, train_loss[-1], val_loss[-1]), flush=True)
         snap_shot = {'epoch': epoch, 'train_loss': train_loss,
                      'val_loss': val_loss, 'state_dict': model.state_dict()}

@@ -1,10 +1,48 @@
-def calculateF1(embed, label):
-    # embed (N,d) [(0,1)]
-    # label (N,d) [0/1]
+import numpy as np
 
-    F1 = 0.
-    ###write###
+# data format
+# The dimension of X_pre and X_gt are NXnum_cls, whether N is the number of samples and num_cls is the number of classes
 
-    ###########
 
-    print('F1 score is:{}'.format(F1))
+def Precision(X_pre, X_gt):
+
+    N = len(X_pre)
+    p = 0.0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += np.sum(x*y)/(np.sum(x) + 1e-8)
+    return p/N
+
+
+def Recall(X_pre, X_gt):
+    N = len(X_pre)
+    p = 0.0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += np.sum(x * y) / np.sum(y)
+    return p/N
+
+
+def F1(X_pre, X_gt):
+    N = len(X_pre)
+    p = 0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += 2*np.sum(x * y) / (np.sum(x) + np.sum(y))
+    return p/N
+
+
+def get_eval(X_pre, X_gt):
+    best_f1 = None
+    best_prec = None
+    best_recall = None
+
+    for thd in np.arange(0, 1, 0.1):
+    	###############
+        pass
+        ###############
+
+    print('')
