@@ -1,50 +1,48 @@
 import numpy as np
-from sklearn.metrics import precision_score, recall_score, f1_score
+
+# data format
+# The dimension of X_pre and X_gt are NXnum_cls, whether N is the number of samples and num_cls is the number of classes
 
 
-def calculateF1(embed, label):
-    # embed (N,d) [R]
-    # label (N,d) [0/1]
+def Precision(X_pre, X_gt):
 
-    F1 = 0.
-    ###write###
-    bestF1 = 0
-    threshold = 0
-    bestRecall = 0
-    bestPrecision = 0
-    for i in range(0, 1, 0.01):
-        newEmbed = np.array(embed > i, dtype='float64')
-        recall = recall_score(label,newEmbed,average='micro')
-        precision = precision_score(label,newEmbed,average='micro')
-        f1 = f1_score(label,newEmbed,average='micro')
-        if f1 > bestF1:
-            bestF1 = f1
-            bestPrecision = precision
-            bestRecall = recall
-            threshold = i
-
-    ###########
-
-    print('F1 score is:{}'.format(F1))
+    N = len(X_pre)
+    p = 0.0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += np.sum(x*y)/(np.sum(x) + 1e-8)
+    return p/N
 
 
-if __name__ == '__main__':
-    a = [[0.2,0.1],
-         [0.3,0.9],
-         [0.5,0.8],
-         [0.8,0.1]]
-    a = np.array(a, dtype='float64')
-    print(a)
-    b = np.array(a > 0.5,dtype='float64')
-    print(b)
-    c = [[0,0],
-         [1,0],
-         [0,1],
-         [1,0]]
-    c = np.array(c)
-    recall = recall_score(c,b,average='macro')
-    pre = precision_score(c,b,average='macro')
-    f1 = f1_score(c,b,average='macro')
-    print(f1)
-    print(2*pre*recall/(pre+recall))
-    #calculateF1()
+def Recall(X_pre, X_gt):
+    N = len(X_pre)
+    p = 0.0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += np.sum(x * y) / np.sum(y)
+    return p/N
+
+
+def F1(X_pre, X_gt):
+    N = len(X_pre)
+    p = 0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += 2*np.sum(x * y) / (np.sum(x) + np.sum(y))
+    return p/N
+
+
+def get_eval(X_pre, X_gt):
+    best_f1 = None
+    best_prec = None
+    best_recall = None
+
+    for thd in np.arange(0, 1, 0.1):
+    	###############
+        pass
+        ###############
+
+    print('')
