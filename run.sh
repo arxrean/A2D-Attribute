@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --partition=2080ti  
+#SBATCH --partition=gpu
 #SBATCH -N 1
 #SBATCH -n 1
 #SBATCH -c 8

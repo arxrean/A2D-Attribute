@@ -26,7 +26,7 @@ def p_parse():
     parser.add_argument('--class_num', type=int, default=43)
     # config
     parser.add_argument("--num_workers", default=8, type=int)
-    parser.add_argument("--batch_size", default=16, type=int)
+    parser.add_argument("--batch_size", default=64, type=int)
     parser.add_argument("--max_epoches", default=20, type=int)
     parser.add_argument("--cuda", default=False, type=bool)
     parser.add_argument("--pretrained", default=True, type=bool)
@@ -106,6 +106,10 @@ def joint_classification(args):
                 imgs = pack[1]  # (N,t,c,m,n)
                 labels = pack[2]  # (N,t,c,m,n)
 
+                if args.cuda:
+                    imgs = imgs.cuda()
+                    labels = labels.cuda()
+
                 out, fc = model(imgs)
                 loss = criterion(out, labels)
 
@@ -115,7 +119,7 @@ def joint_classification(args):
             epoch, train_loss[-1], val_loss[-1]), flush=True)
         snap_shot = {'epoch': epoch, 'train_loss': train_loss,
                      'val_loss': val_loss, 'state_dict': model.state_dict()}
-        np.save('./save/joint_classification/snap/snap_{}/npy'.format(epoch), snap_shot)
+        np.save('./save/joint_classification/snap/snap_{}.npy'.format(epoch), snap_shot)
 
 
 if __name__ == '__main__':
