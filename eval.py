@@ -55,7 +55,7 @@ def eval_joint_classification(args):
         model = model.cuda()
 
     model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'joint_classification/snap/best.pth.tar'), map_location='cpu')['state_dict'])
+        args.save_root, 'joint_classification/best.pth.tar'), map_location='cpu')['state_dict'])
 
     total_res = []
     total_label = []
@@ -78,6 +78,11 @@ def eval_joint_classification(args):
     get_eval(total_res, total_label)
 
 
+def eval_split_classification(args):
+    # similar with above
+    pass
+
+
 if __name__ == '__main__':
     args = p_parse()
-    eval_joint_classification(args)
+    # eval_joint_classification(args)
