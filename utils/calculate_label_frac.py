@@ -85,6 +85,9 @@ def actor_action_frac(actor_embed_size=7,action_embed_size=9):
     print('actor_res:', actor_res)
     print('action_res:', action_res)
 
+    np.save('./repo/actor_label_frac.npy', actor_res)
+    np.save('./repo/action_label_frac.npy', action_res)
+
     return actor_res, action_res
 
 if __name__ == '__main__':
