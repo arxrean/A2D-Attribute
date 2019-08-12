@@ -26,7 +26,7 @@ class JointClassifier(nn.Module):
         super(JointClassifier, self).__init__()
         # feature encoding
         self.backbone = backbone
-        self.args=args
+        self.args = args
 
         # classifier
         self.adapool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
@@ -40,7 +40,39 @@ class JointClassifier(nn.Module):
         return out, fc
 
 
+class SplitClassifier(nn.Module):
+    def __init__(self, backbone, args):
+        super(SplitClassifier, self).__init__()
+        # feature encoding
+        self.backbone = backbone
+        self.args = args
+
+        # classifier
+        self.adapool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
+        self.actor_fc = nn.Sequential(
+            nn.Linear(2048, 2048),
+            nn.Linear(2048, self.args.actor_num)
+        )
+        self.action_fc = nn.Sequential(
+            nn.Linear(2048, 2048),
+            nn.Linear(2048, self.args.action_num)
+        )
+
+    def forward(self, x):
+        x = self.backbone(x)
+        fc = self.adapool(x).squeeze()
+        actor_out = self.actor_fc(fc)
+        action_out = self.action_fc(fc)
+
+        return actor_out, action_out
+
+
 def getJointClassifier(args):
     net = JointClassifier(backbone=res_block_50(args), args=args)
+
+    return net
+
+def getSplitClassifier(args):
+    net = SplitClassifier(backbone=res_block_50(args), args=args)
 
     return net

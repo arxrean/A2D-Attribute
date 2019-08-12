@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch import Tensor
 import numpy as np
 
-from utils.helper import Precision, Recall, F1
+from utils.helper import get_eval
 from loader.A2DClsLoader import A2DClassification
 from model.net import getJointClassifier
 
@@ -27,7 +27,7 @@ def p_parse():
     # config
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--batch_size", default=64, type=int)
-    parser.add_argument("--max_epoches", default=20, type=int)
+    parser.add_argument("--max_epoches", default=99999999, type=int)
     parser.add_argument("--cuda", default=False, type=bool)
     parser.add_argument("--pretrained", default=True, type=bool)
     # save
@@ -55,7 +55,7 @@ def eval_joint_classification(args):
         model = model.cuda()
 
     model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'joint_classification/snap/snap_19.pth.tar')['state_dict'], map_location='cpu'))
+        args.save_root, 'joint_classification/snap/best.pth.tar'), map_location='cpu')['state_dict'])
 
     total_res = []
     total_label = []
@@ -75,11 +75,7 @@ def eval_joint_classification(args):
 
     total_res = np.concatenate(total_res, axis=0)
     total_label = np.concatenate(total_label, axis=0)
-    P = Precision(total_res, total_label)
-    R = Recall(total_res, total_label)
-    F = F1(total_res, total_label)
-    print('Precision: {:.1f} Recall: {:.1f} F1: {:.1f}'.format(
-        100 * P, 100 * R, 100 * F))
+    get_eval(total_res, total_label)
 
 
 if __name__ == '__main__':

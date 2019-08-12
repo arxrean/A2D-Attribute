@@ -46,6 +46,11 @@ def get_eval(X_pre, X_gt):
             best_prec = Precision(X_pre_new, X_gt)
             best_recall = Recall(X_pre_new, X_gt)
             Threshold = thd
+
+    print('best_f1:{}'.format(best_f1))
+    print('best_prec:{}'.format(best_prec))
+    print('best_recall:{}'.format(best_recall))
+    print('Threshold:{}'.format(Threshold))
     return best_f1, best_prec, best_recall, Threshold
 
 
