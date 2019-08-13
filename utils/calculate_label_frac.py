@@ -78,10 +78,13 @@ def actor_action_frac(actor_embed_size=7,action_embed_size=9):
     print('action_res:', action_res)
 
     N_actor = np.ones(actor_embed_size) * num_items
-    actor_res = actor_res / (N_actor - actor_res)
+    #actor_res = actor_res / (N_actor - actor_res)
+    actor_res = (N_actor - actor_res) / actor_res
 
     N_action = np.ones(action_embed_size) * num_items
-    action_res = action_res / (N_action - action_res)
+    #action_res = action_res / (N_action - action_res)
+    action_res = (N_action - action_res) / action_res
+
     print('actor_res:', actor_res)
     print('action_res:', action_res)
 
