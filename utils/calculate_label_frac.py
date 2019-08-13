@@ -31,7 +31,8 @@ def joint_frac(embed_size=43):
     print(res)
     N = np.ones(embed_size) * num_items
     print(num_items)
-    res = res / (N-res)
+    #res = res / (N-res)
+    res = (N-res) / res
     print(res)
     
     np.save('./repo/joint_label_frac.npy', res)
