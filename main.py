@@ -8,10 +8,12 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 import numpy as np
+import shutil
 
 from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
 from model.net import getJointClassifier, getSplitClassifier
 from utils.opt import get_finetune_optimizer
+from utils.helper import get_pos_weight, bce_weight_loss
 
 
 def p_parse():
@@ -157,17 +159,11 @@ def split_classification(args):
     if args.cuda:
         model = model.cuda()
 
-    actor_criterion = None
-    action_criterion = None
-    # if args.cuda:
-    #     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.from_numpy(
-    #         np.load('./repo/joint_label_frac.npy')).type(torch.FloatTensor).cuda())
-    # else:
-    #     criterion = nn.BCEWithLogitsLoss(pos_weight=torch.from_numpy(
-    #         np.load('./repo/joint_label_frac.npy')).type(torch.FloatTensor))
+    criterion = bce_weight_loss(args=args)
 
-    if not os.path.exists('./save/split_classification/snap/'):
-        os.makedirs('./save/split_classification/snap/')
+    if os.path.exists('./save/split_classification/snap/'):
+        shutil.rmtree('./save/split_classification/snap/')
+    os.makedirs('./save/split_classification/snap/')
 
     train_loss = []
     val_loss = []
@@ -187,8 +183,9 @@ def split_classification(args):
                 action_labels = action_labels.cuda()
 
             actor_out, action_out = model(imgs)
-            actor_loss = actor_criterion(actor_out, actor_labels)
-            action_loss = action_criterion(action_out, action_labels)
+            actor_loss = criterion.get_loss(actor_out, actor_labels)
+            action_loss = criterion.get_loss(
+                action_out, action_labels)
             opt.zero_grad()
             (actor_loss+action_loss).backward()
             opt.step()
@@ -207,8 +204,9 @@ def split_classification(args):
                     action_labels = action_labels.cuda()
 
                 actor_out, action_out = model(imgs)
-                actor_loss = actor_criterion(actor_out, actor_labels)
-                action_loss = action_criterion(action_out, action_labels)
+                actor_loss = criterion.get_loss(actor_out, actor_labels)
+                action_loss = criterion.get_loss(
+                    action_out, action_labels)
 
                 val_loss[-1] += actor_loss.item()+action_loss.item()
 

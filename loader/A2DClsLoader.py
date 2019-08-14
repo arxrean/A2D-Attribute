@@ -145,8 +145,6 @@ class A2DClassificationWithActorAction(Dataset):
         action_label = action_label.sum(axis=0)
         action_label = np.where(action_label > 1, 1, action_label)
 
-        pdb.set_trace()
-
         return img, label, actor_label, action_label, item['img_id']
 
     def __len__(self):

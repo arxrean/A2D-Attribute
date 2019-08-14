@@ -17,8 +17,7 @@ from torch.nn.parameter import Parameter
 import numpy as np
 import cv2
 
-from .backbone import res_block_50
-
+from model.backbone import res_block_50
 
 class JointClassifier(nn.Module):
 
