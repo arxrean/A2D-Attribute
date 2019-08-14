@@ -64,6 +64,7 @@ class A2DClassification(Dataset):
         label = to_categorical(label, num_classes=self.num_valid)
         label = np.array(label)
         label = label.sum(axis=0)
+        label = np.where(label > 1, 1, label)
 
         return item['img_id'], img, label
 
@@ -132,15 +133,17 @@ class A2DClassificationWithActorAction(Dataset):
         label = to_categorical(label, num_classes=self.num_valid)
         label = np.array(label)
         label = label.sum(axis=0)
+        label = np.where(label > 1, 1, label)
 
         actor_label = to_categorical(actor_label, num_classes=self.num_actor)
         actor_label = np.array(actor_label)
         actor_label = actor_label.sum(axis=0)
+        actor_label = np.where(actor_label > 1, 1, actor_label)
 
-        action_label = to_categorical(
-            action_label, num_classes=self.num_action)
+        action_label = to_categorical(action_label, num_classes=self.num_action)
         action_label = np.array(action_label)
         action_label = action_label.sum(axis=0)
+        action_label = np.where(action_label > 1, 1, action_label)
 
         pdb.set_trace()
 
