@@ -62,9 +62,9 @@ def get_eval(X_pre, X_gt):
             Threshold = thd
 
     for num in range(5):
+        X_pre_new = X_pre
         for row in range(len(X_pre)):
             largest = nlargest(num+1, X_pre[row, :])
-            X_pre_new = X_pre
             X_pre_new[row, :] = np.where(X_pre[row, :] >= min(largest), 1, 0)
         f1 = F1(X_pre_new, X_gt)
         if best_f1_maxnum is None or f1 > best_f1_maxnum:
