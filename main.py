@@ -82,8 +82,9 @@ def joint_classification(args):
         criterion = nn.BCEWithLogitsLoss(pos_weight=torch.from_numpy(
             np.load('./repo/joint_label_frac.npy')).type(torch.FloatTensor))
 
-    if not os.path.exists('./save/joint_classification/snap/'):
-        os.makedirs('./save/joint_classification/snap/')
+    if os.path.exists('./save/joint_classification/snap/'):
+        shutil.rmtree('./save/joint_classification/snap/')
+    os.makedirs('./save/joint_classification/snap/')
 
     train_loss = []
     val_loss = []

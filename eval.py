@@ -25,6 +25,8 @@ def p_parse():
     parser.add_argument('--t', type=int, default=0)
     parser.add_argument('--input_size', type=int, default=224)
     parser.add_argument('--class_num', type=int, default=43)
+    parser.add_argument('--actor_num', type=int, default=7)
+    parser.add_argument('--action_num', type=int, default=9)
     # config
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--batch_size", default=64, type=int)
@@ -86,6 +88,7 @@ def eval_split_classification(args):
              55: 25, 56: 26, 57: 27, 59: 28, 61: 29, 63: 30, 65: 31, 66: 32,
              67: 33, 68: 34, 69: 35, 72: 36, 73: 37, 75: 38, 76: 39, 77: 40,
              78: 41, 79: 42}
+
     val_transform = transforms.Compose([
         transforms.Resize((args.input_size, args.input_size)),
         transforms.ToTensor(),
@@ -103,7 +106,7 @@ def eval_split_classification(args):
 
     #need to be modified
     model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'joint_classification/best.pth.tar'), map_location='cpu')['state_dict'])
+        args.save_root, 'split_classification/snap/snap_186.pth.tar'), map_location='cpu')['state_dict'])
     
     total_res = []
     total_label = []
@@ -161,3 +164,4 @@ def eval_split_classification(args):
 if __name__ == '__main__':
     args = p_parse()
     # eval_joint_classification(args)
+    eval_split_classification(args)
