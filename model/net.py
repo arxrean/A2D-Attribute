@@ -49,11 +49,9 @@ class SplitClassifier(nn.Module):
         # classifier
         self.adapool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.actor_fc = nn.Sequential(
-            nn.Linear(2048, 2048),
             nn.Linear(2048, self.args.actor_num)
         )
         self.action_fc = nn.Sequential(
-            nn.Linear(2048, 2048),
             nn.Linear(2048, self.args.action_num)
         )
 

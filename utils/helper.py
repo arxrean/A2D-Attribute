@@ -2,6 +2,8 @@ import numpy as np
 from heapq import nlargest
 import torch
 import torch.nn as nn
+import os
+import matplotlib.pyplot as plt
 # data format
 # The dimension of X_pre and X_gt are NXnum_cls, whether N is the number of samples and num_cls is the number of classes
 
@@ -122,3 +124,27 @@ class bce_weight_loss:
                 pos_weight=pos_weight.type(torch.FloatTensor))
 
         return self.criterion(output, target)
+
+
+def plot_loss_acc(slurm_or_snap):
+    if os.path.isfile(slurm_or_snap):
+        lines = open(slurm_or_snap, 'r').readlines()[1:]
+        train_loss = list(map(lambda x: float(x.split(
+            ' ')[1].split(':')[-1].strip()), lines))
+        val_loss = list(map(lambda x: float(x.split(
+            ' ')[2].split(':')[-1].strip()), lines))
+
+        plt.figure()
+        plt.plot(range(len(train_loss)), train_loss, label='train_loss')
+        plt.plot(range(len(val_loss)), val_loss, label='val_loss')
+
+        plt.legend()
+        plt.savefig(
+            '/mnt/lustre/jiangsu/dlar/home/zyk17/newcode/A2D-Attribute/save/split_classification/imgs/train_line.png')
+    else:
+        pass
+
+
+if __name__ == '__main__':
+    plot_loss_acc(
+        '/mnt/lustre/jiangsu/dlar/home/zyk17/newcode/A2D-Attribute/slurm-8391093.out')
