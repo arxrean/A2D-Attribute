@@ -97,7 +97,7 @@ def eval_split_classification(args):
     ])
 
     val_dataset = A2DClassificationWithActorAction(args, val_transform, mode='val')
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
+    val_loader = DataLoader(val_dataset, batch_size=8, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
     model = getSplitClassifier(args)
@@ -106,7 +106,7 @@ def eval_split_classification(args):
 
     #need to be modified
     model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'split_classification/snap/snap_186.pth.tar'), map_location='cpu')['state_dict'])
+        args.save_root, 'split_classification/snap/snap_268.pth.tar'), map_location='cpu')['state_dict'])
     
     total_res = []
     total_label = []
@@ -114,8 +114,8 @@ def eval_split_classification(args):
         for iter, pack in enumerate(val_loader):
             imgs = pack[0]  # (N,t,c,m,n)
             labels = pack[1]
-            #actor_labels = pack[2]
-            #action_labels = pack[3]
+            actor_labels = pack[2]
+            action_labels = pack[3]
 
             if args.cuda:
                 imgs = imgs.cuda()
@@ -126,6 +126,11 @@ def eval_split_classification(args):
             actor_out, action_out = model(imgs)
             actor_out = F.sigmoid(actor_out)
             action_out = F.sigmoid(action_out)
+
+            #######test###########
+            # actor_out=actor_out.detach().cpu().numpy()
+            # actor_out[actor_out>=0.6]=1
+            # actor_out[actor_out<0.6]=0
             sample_num = len(actor_out)
             actor_action = []
             for i in range(sample_num):
