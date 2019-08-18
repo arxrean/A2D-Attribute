@@ -39,30 +39,36 @@ def F1(X_pre, X_gt):
 
 
 def get_eval(X_pre, X_gt):
-    best_f1 = None
+
+    best_f1= None
     best_prec = None
-    best_recall = None
-    caltype = None
-
-    best_f1_threshold = None
-    best_prec_threshold = None
-    best_recall_threshold = None
+    best_recall= None
     Threshold = None
-
-    best_f1_maxnum = None
-    best_prec_maxnum = None
-    best_recall_maxnum = None
-    maxnum = None
 
     for thd in np.arange(0, 1, 0.01):
         X_pre_new = np.array(X_pre > thd, dtype='float64')
         f1 = F1(X_pre_new, X_gt)
-        if best_f1_threshold is None or f1 > best_f1_threshold:
-            best_f1_threshold = f1
-            best_prec_threshold = Precision(X_pre_new, X_gt)
-            best_recall_threshold = Recall(X_pre_new, X_gt)
-            Threshold = thd
+        recall = Recall(X_pre_new, X_gt)
+        pre = Precision(X_pre_new, X_gt)
+        print('threshold:{}'.format(thd))
+        print('f1:{}'.format(f1))
+        print()
+        #print('prec:{}'.format(pre))
+        #print('recall:{}'.format(recall))
 
+        if best_f1 is None or f1 > best_f1:
+            best_f1 = f1
+            best_prec = pre
+            best_recall = recall
+            Threshold = thd
+    print('best threshold:{}'.format(Threshold))
+    print('best f1:{}'.format(best_f1))
+    print('best prec:{}'.format(best_prec))
+    print('best recall:{}'.format(best_recall))
+    return Threshold, best_f1, best_prec, best_recall
+
+
+    '''
     for num in range(5):
         X_pre_new = np.array(X_pre)
         for row in range(len(X_pre)):
@@ -85,7 +91,9 @@ def get_eval(X_pre, X_gt):
         best_prec = best_prec_threshold
         best_recall = best_recall_threshold
         caltype = 'threshold'
+    '''
 
+    '''
     print('best_f1:{}'.format(best_f1))
     print('best_prec:{}'.format(best_prec))
     print('best_recall:{}'.format(best_recall))
@@ -96,6 +104,7 @@ def get_eval(X_pre, X_gt):
     else:
         print('maxnum:{}'.format(maxnum))
         return best_f1, best_prec, best_recall, caltype, maxnum
+    '''
 
 
 def get_pos_weight(gt_labels, args):
@@ -146,5 +155,21 @@ def plot_loss_acc(slurm_or_snap):
 
 
 if __name__ == '__main__':
+    '''
     plot_loss_acc(
         '/mnt/lustre/jiangsu/dlar/home/zyk17/newcode/A2D-Attribute/slurm-8391093.out')
+    '''
+    txt = np.loadtxt('E:/github_project/A2D-Attribute/save/joint_classification/loss.txt',dtype=str)
+    train_loss = []
+    val_loss = []
+    for item in txt:
+        train_loss.append(float(item[1].split(':')[1]))
+        val_loss.append(float(item[2].split(':')[1]))
+    plt.figure()
+    plt.plot(range(len(train_loss)), train_loss, label='train_loss')
+    plt.plot(range(len(val_loss)), val_loss, label='val_loss')
+    plt.legend()
+    if not os.path.exists('./save/joint_classification/imgs'):
+        os.makedirs('./save/joint_classification/imgs')
+    plt.savefig('./save/joint_classification/imgs/train_line.png')
+    plt.close()
