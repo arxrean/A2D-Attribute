@@ -20,7 +20,7 @@ def p_parse():
     parser.add_argument("--session_name", default="a2d", type=str)
     # data
     parser.add_argument(
-        "--a2d_root", default='/mnt/lustre/jiangsu/dlar/home/zyk17/data/A2D/Release', type=str)
+        "--a2d_root", default='E:/A2D/Release', type=str)
     parser.add_argument('--csv_path', default='./repo/newVideoSet.csv')
     parser.add_argument('--t', type=int, default=0)
     parser.add_argument('--input_size', type=int, default=224)
@@ -58,7 +58,7 @@ def eval_joint_classification(args):
         model = model.cuda()
 
     model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'joint_classification/best.pth.tar'), map_location='cpu')['state_dict'])
+        args.save_root, 'joint_classification/snap/snap_25.pth.tar'), map_location='cpu')['state_dict'])
 
     total_res = []
     total_label = []
@@ -80,6 +80,65 @@ def eval_joint_classification(args):
     total_label = np.concatenate(total_label, axis=0)
     get_eval(total_res, total_label)
 
+'''
+def eval_joint_classification(args):
+    val_transform = transforms.Compose([
+        transforms.Resize((args.input_size, args.input_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
+
+    val_dataset = A2DClassification(args, val_transform, mode='val')
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
+                            pin_memory=True, drop_last=False, shuffle=False)
+
+    model = getJointClassifier(args)
+    if args.cuda:
+        model = model.cuda()
+
+    best_Model = None
+    best_f1= None
+    best_prec = None
+    best_recall= None
+    Threshold_in_bestF1 = None
+    for i in range(82):
+        print('model:{}'.format('snap_' + str(i) + '.pth.tar'))
+        model.load_state_dict(torch.load(os.path.join(
+            args.save_root, 'joint_classification/snap/snap_' + str(i) + '.pth.tar'), map_location='cpu')['state_dict'])
+
+        total_res = []
+        total_label = []
+        with torch.no_grad():
+            for iter, pack in enumerate(val_loader):
+                imgs = pack[1]  # (N,t,c,m,n)
+                labels = pack[2]  # (N,t,c,m,n)
+
+                if args.cuda:
+                    imgs = imgs.cuda()
+                    labels = labels.cuda()
+
+                out, fc = model(imgs)
+                out = F.sigmoid(out)
+                total_res.append(out.detach().cpu().numpy())
+                total_label.append(labels.cpu().numpy())
+
+        total_res = np.concatenate(total_res, axis=0)
+        total_label = np.concatenate(total_label, axis=0)
+        Threshold, f1, prec, recall = get_eval(total_res, total_label)
+
+        if best_Model is None or f1 > best_f1:
+            best_Model = i
+            best_f1= f1
+            best_prec = prec
+            best_recall= recall
+            Threshold_in_bestF1 = Threshold
+    print('best model:{}'.format(best_Model))
+    print('best f1:{}'.format(best_f1))
+    print('best prec:{}'.format(best_prec))
+    print('best recall:{}'.format(best_recall))
+    print('Threshold:{}'.format(Threshold_in_bestF1))
+'''
 
 def eval_split_classification(args):
     valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8, 
@@ -106,7 +165,7 @@ def eval_split_classification(args):
 
     #need to be modified
     model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'split_classification/snap/snap_268.pth.tar'), map_location='cpu')['state_dict'])
+        args.save_root, 'split_classification/snap/snap_329.pth.tar'), map_location='cpu')['state_dict'])
     
     total_res = []
     total_label = []
@@ -120,41 +179,39 @@ def eval_split_classification(args):
             if args.cuda:
                 imgs = imgs.cuda()
                 labels = labels.cuda()
-                #actor_labels = actor_labels.cuda()
-                #action_labels = action_labels.cuda()
+                actor_labels = actor_labels.cuda()
+                action_labels = action_labels.cuda()
 
             actor_out, action_out = model(imgs)
             actor_out = F.sigmoid(actor_out)
             action_out = F.sigmoid(action_out)
 
-            #######test###########
-            # actor_out=actor_out.detach().cpu().numpy()
-            # actor_out[actor_out>=0.6]=1
-            # actor_out[actor_out<0.6]=0
             sample_num = len(actor_out)
             actor_action = []
             for i in range(sample_num):
                 actor_action.append(
                     np.outer(actor_out.detach().cpu().numpy()[i],action_out.detach().cpu().numpy()[i]).tolist())
-            actor_action = np.array(actor_action)
-
+            
+            #actor_action = F.sigmoid(Tensor(actor_action))
+            #actor_action = actor_action.detach().cpu().numpy().tolist()
             actor_action_labels = []
             for sample in actor_action:
-                sample_labels = []
+                sample_labels = np.zeros(len(valid)).tolist()
                 row_num = 1
                 column_num = 1
                 for row in sample:
                     for item in row:
                         position = row_num * 10 + column_num
-                        if position in valid and item == 1:
-                            sample_labels.append(valid[position])
+                        if position in valid:
+                            sample_labels[valid[position]] = item
+                            #sample_labels.append(valid[position])
                             #actor_action_label.append(valid[position])
                         column_num += 1
                     row_num += 1
-                sample_labels = to_categorical(sample_labels, num_classes=len(valid))
-                sample_labels = np.array(sample_labels)
-                sample_labels = sample_labels.sum(axis=0)
-                sample_labels = np.where(sample_labels > 1, 1, sample_labels)
+                #sample_labels = to_categorical(sample_labels, num_classes=len(valid))
+                #sample_labels = np.array(sample_labels)
+                #sample_labels = sample_labels.sum(axis=0)
+                #sample_labels = np.where(sample_labels > 1, 1, sample_labels)
                 actor_action_labels.append(sample_labels)
 
             total_res.append(actor_action_labels)
@@ -166,7 +223,58 @@ def eval_split_classification(args):
     total_label = np.concatenate(total_label, axis=0)
     get_eval(total_res, total_label)
 
+def eval_actor_or_action_classification(args):
+    val_transform = transforms.Compose([
+        transforms.Resize((args.input_size, args.input_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
+
+    val_dataset = A2DClassificationWithActorAction(args, val_transform, mode='val')
+    val_loader = DataLoader(val_dataset, batch_size=8, num_workers=0,
+                            pin_memory=True, drop_last=False, shuffle=False)
+
+    model = getSplitClassifier(args)
+    if args.cuda:
+        model = model.cuda()
+
+    #need to be modified
+    model.load_state_dict(torch.load(os.path.join(
+        args.save_root, 'split_classification/snap/snap_329.pth.tar'), map_location='cpu')['state_dict'])
+    
+    total_res = []
+    total_label = []
+    with torch.no_grad():
+        abc = 0
+        for iter, pack in enumerate(val_loader):
+            imgs = pack[0]  # (N,t,c,m,n)
+            labels = pack[1]
+            actor_labels = pack[2]
+            action_labels = pack[3]
+
+            if args.cuda:
+                imgs = imgs.cuda()
+                labels = labels.cuda()
+                actor_labels = actor_labels.cuda()
+                action_labels = action_labels.cuda()
+
+            actor_out, action_out = model(imgs)
+            actor_out = F.sigmoid(actor_out)
+            action_out = F.sigmoid(action_out)
+
+            #total_res.append(actor_out.detach().cpu().numpy())
+            #total_label.append(actor_labels.cpu().numpy())
+            total_res.append(action_out.detach().cpu().numpy())
+            total_label.append(action_labels.cpu().numpy())
+
+    total_res = np.concatenate(total_res, axis=0)
+    total_label = np.concatenate(total_label, axis=0)
+    get_eval(total_res, total_label)
+
+
 if __name__ == '__main__':
     args = p_parse()
-    # eval_joint_classification(args)
-    eval_split_classification(args)
+    eval_joint_classification(args)
+    #eval_split_classification(args)
+    #eval_actor_or_action_classification(args)
