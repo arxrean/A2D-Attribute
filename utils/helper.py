@@ -45,7 +45,7 @@ def get_eval(X_pre, X_gt):
     best_recall= None
     Threshold = None
 
-    for thd in np.arange(0, 1, 0.01):
+    for thd in np.arange(0, 1, 0.001):
         X_pre_new = np.array(X_pre > thd, dtype='float64')
         f1 = F1(X_pre_new, X_gt)
         recall = Recall(X_pre_new, X_gt)
