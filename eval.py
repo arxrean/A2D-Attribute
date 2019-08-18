@@ -192,26 +192,14 @@ def eval_split_classification(args):
                 actor_action.append(
                     np.outer(actor_out.detach().cpu().numpy()[i],action_out.detach().cpu().numpy()[i]).tolist())
             
-            #actor_action = F.sigmoid(Tensor(actor_action))
-            #actor_action = actor_action.detach().cpu().numpy().tolist()
             actor_action_labels = []
             for sample in actor_action:
                 sample_labels = np.zeros(len(valid)).tolist()
-                row_num = 1
-                column_num = 1
-                for row in sample:
-                    for item in row:
-                        position = row_num * 10 + column_num
-                        if position in valid:
-                            sample_labels[valid[position]] = item
-                            #sample_labels.append(valid[position])
-                            #actor_action_label.append(valid[position])
-                        column_num += 1
-                    row_num += 1
-                #sample_labels = to_categorical(sample_labels, num_classes=len(valid))
-                #sample_labels = np.array(sample_labels)
-                #sample_labels = sample_labels.sum(axis=0)
-                #sample_labels = np.where(sample_labels > 1, 1, sample_labels)
+
+                for position in range(len(sample_labels)):
+                    key = list(valid.keys())[list(valid.values()).index(position)]
+                    sample_labels[position] = sample[key//10 - 1][key%10 - 1]
+
                 actor_action_labels.append(sample_labels)
 
             total_res.append(actor_action_labels)
@@ -275,6 +263,6 @@ def eval_actor_or_action_classification(args):
 
 if __name__ == '__main__':
     args = p_parse()
-    eval_joint_classification(args)
-    #eval_split_classification(args)
+    #eval_joint_classification(args)
+    eval_split_classification(args)
     #eval_actor_or_action_classification(args)
