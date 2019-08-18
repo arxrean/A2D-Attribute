@@ -206,7 +206,7 @@ def eval_split_classification(args):
             total_label.append(labels.cpu().numpy())
 
     total_res = np.array(total_res)
-    total_label = np.array(total_label)    
+    total_label = np.array(total_label)
     total_res = np.concatenate(total_res, axis=0)
     total_label = np.concatenate(total_label, axis=0)
     get_eval(total_res, total_label)
