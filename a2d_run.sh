@@ -7,4 +7,5 @@
 #SBATCH --gres=gpu:1
     # srun python ./utils/calculate_mean_std.py
     # srun python main.py --cuda True
-    srun python eval.py --cuda True
+    # srun python eval.py --cuda True
+    srun python visualize.py --cuda True

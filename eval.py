@@ -9,18 +9,18 @@ import torch.nn.functional as F
 from torch import Tensor
 import numpy as np
 
-from utils.helper import get_eval
 from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
 from model.net import getJointClassifier, getSplitClassifier
 
 from keras.utils import to_categorical
+
 
 def p_parse():
     parser = argparse.ArgumentParser()
     parser.add_argument("--session_name", default="a2d", type=str)
     # data
     parser.add_argument(
-        "--a2d_root", default='E:/A2D/Release', type=str)
+        "--a2d_root", default='/mnt/lustre/jiangsu/dlar/home/zyk17/data/A2D/Release', type=str)
     parser.add_argument('--csv_path', default='./repo/newVideoSet.csv')
     parser.add_argument('--t', type=int, default=0)
     parser.add_argument('--input_size', type=int, default=224)
@@ -41,6 +41,66 @@ def p_parse():
     return args
 
 
+def Precision(X_pre, X_gt):
+    N = len(X_pre)
+    p = 0.0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += np.sum(x*y)/(np.sum(x) + 1e-8)
+    return p/N
+
+
+def Recall(X_pre, X_gt):
+    N = len(X_pre)
+    p = 0.0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += np.sum(x * y) / np.sum(y)
+    return p/N
+
+
+def F1(X_pre, X_gt):
+    N = len(X_pre)
+    p = 0
+    for i in range(N):
+        x = X_pre[i, :]
+        y = X_gt[i, :]
+        p += 2*np.sum(x * y) / (np.sum(x) + np.sum(y))
+    return p/N
+
+
+def get_eval(X_pre, X_gt):
+
+    best_f1 = None
+    best_prec = None
+    best_recall = None
+    Threshold = None
+
+    for thd in np.arange(0, 1, 0.001):
+        X_pre_new = np.array(X_pre > thd, dtype='float64')
+        f1 = F1(X_pre_new, X_gt)
+        recall = Recall(X_pre_new, X_gt)
+        pre = Precision(X_pre_new, X_gt)
+        print('threshold:{}'.format(thd))
+        print('f1:{}'.format(f1))
+        print()
+        # print('prec:{}'.format(pre))
+        # print('recall:{}'.format(recall))
+
+        if best_f1 is None or f1 > best_f1:
+            best_f1 = f1
+            best_prec = pre
+            best_recall = recall
+            Threshold = thd
+    print('best threshold:{}'.format(Threshold))
+    print('best f1:{}'.format(best_f1))
+    print('best prec:{}'.format(best_prec))
+    print('best recall:{}'.format(best_recall))
+    return Threshold, best_f1, best_prec, best_recall
+
+
 def eval_joint_classification(args):
     val_transform = transforms.Compose([
         transforms.Resize((args.input_size, args.input_size)),
@@ -58,7 +118,7 @@ def eval_joint_classification(args):
         model = model.cuda()
 
     model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'joint_classification/snap/snap_25.pth.tar'), map_location='cpu')['state_dict'])
+        args.save_root, 'joint_classification/snap_25.pth.tar'), map_location='cpu')['state_dict'])
 
     total_res = []
     total_label = []
@@ -80,68 +140,9 @@ def eval_joint_classification(args):
     total_label = np.concatenate(total_label, axis=0)
     get_eval(total_res, total_label)
 
-'''
-def eval_joint_classification(args):
-    val_transform = transforms.Compose([
-        transforms.Resize((args.input_size, args.input_size)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.4569, 0.4335, 0.3892],
-                             [0.2093, 0.2065, 0.2046])
-    ])
-
-    val_dataset = A2DClassification(args, val_transform, mode='val')
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
-                            pin_memory=True, drop_last=False, shuffle=False)
-
-    model = getJointClassifier(args)
-    if args.cuda:
-        model = model.cuda()
-
-    best_Model = None
-    best_f1= None
-    best_prec = None
-    best_recall= None
-    Threshold_in_bestF1 = None
-    for i in range(82):
-        print('model:{}'.format('snap_' + str(i) + '.pth.tar'))
-        model.load_state_dict(torch.load(os.path.join(
-            args.save_root, 'joint_classification/snap/snap_' + str(i) + '.pth.tar'), map_location='cpu')['state_dict'])
-
-        total_res = []
-        total_label = []
-        with torch.no_grad():
-            for iter, pack in enumerate(val_loader):
-                imgs = pack[1]  # (N,t,c,m,n)
-                labels = pack[2]  # (N,t,c,m,n)
-
-                if args.cuda:
-                    imgs = imgs.cuda()
-                    labels = labels.cuda()
-
-                out, fc = model(imgs)
-                out = F.sigmoid(out)
-                total_res.append(out.detach().cpu().numpy())
-                total_label.append(labels.cpu().numpy())
-
-        total_res = np.concatenate(total_res, axis=0)
-        total_label = np.concatenate(total_label, axis=0)
-        Threshold, f1, prec, recall = get_eval(total_res, total_label)
-
-        if best_Model is None or f1 > best_f1:
-            best_Model = i
-            best_f1= f1
-            best_prec = prec
-            best_recall= recall
-            Threshold_in_bestF1 = Threshold
-    print('best model:{}'.format(best_Model))
-    print('best f1:{}'.format(best_f1))
-    print('best prec:{}'.format(best_prec))
-    print('best recall:{}'.format(best_recall))
-    print('Threshold:{}'.format(Threshold_in_bestF1))
-'''
 
 def eval_split_classification(args):
-    valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8, 
+    valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8,
              22: 9, 26: 10, 28: 11, 29: 12, 34: 13, 35: 14, 36: 15, 39: 16,
              41: 17, 43: 18, 44: 19, 45: 20, 46: 21, 48: 22, 49: 23, 54: 24,
              55: 25, 56: 26, 57: 27, 59: 28, 61: 29, 63: 30, 65: 31, 66: 32,
@@ -155,7 +156,8 @@ def eval_split_classification(args):
                              [0.2093, 0.2065, 0.2046])
     ])
 
-    val_dataset = A2DClassificationWithActorAction(args, val_transform, mode='val')
+    val_dataset = A2DClassificationWithActorAction(
+        args, val_transform, mode='val')
     val_loader = DataLoader(val_dataset, batch_size=8, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
@@ -163,10 +165,10 @@ def eval_split_classification(args):
     if args.cuda:
         model = model.cuda()
 
-    #need to be modified
+    # need to be modified
     model.load_state_dict(torch.load(os.path.join(
         args.save_root, 'split_classification/snap/snap_329.pth.tar'), map_location='cpu')['state_dict'])
-    
+
     total_res = []
     total_label = []
     with torch.no_grad():
@@ -190,15 +192,16 @@ def eval_split_classification(args):
             actor_action = []
             for i in range(sample_num):
                 actor_action.append(
-                    np.outer(actor_out.detach().cpu().numpy()[i],action_out.detach().cpu().numpy()[i]).tolist())
-            
+                    np.outer(actor_out.detach().cpu().numpy()[i], action_out.detach().cpu().numpy()[i]).tolist())
+
             actor_action_labels = []
             for sample in actor_action:
                 sample_labels = np.zeros(len(valid)).tolist()
 
                 for position in range(len(sample_labels)):
-                    key = list(valid.keys())[list(valid.values()).index(position)]
-                    sample_labels[position] = sample[key//10 - 1][key%10 - 1]
+                    key = list(valid.keys())[
+                        list(valid.values()).index(position)]
+                    sample_labels[position] = sample[key//10 - 1][key % 10 - 1]
 
                 actor_action_labels.append(sample_labels)
 
@@ -211,6 +214,7 @@ def eval_split_classification(args):
     total_label = np.concatenate(total_label, axis=0)
     get_eval(total_res, total_label)
 
+
 def eval_actor_or_action_classification(args):
     val_transform = transforms.Compose([
         transforms.Resize((args.input_size, args.input_size)),
@@ -219,7 +223,8 @@ def eval_actor_or_action_classification(args):
                              [0.2093, 0.2065, 0.2046])
     ])
 
-    val_dataset = A2DClassificationWithActorAction(args, val_transform, mode='val')
+    val_dataset = A2DClassificationWithActorAction(
+        args, val_transform, mode='val')
     val_loader = DataLoader(val_dataset, batch_size=8, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
@@ -227,10 +232,10 @@ def eval_actor_or_action_classification(args):
     if args.cuda:
         model = model.cuda()
 
-    #need to be modified
+    # need to be modified
     model.load_state_dict(torch.load(os.path.join(
         args.save_root, 'split_classification/snap/snap_329.pth.tar'), map_location='cpu')['state_dict'])
-    
+
     total_res = []
     total_label = []
     with torch.no_grad():
@@ -251,8 +256,8 @@ def eval_actor_or_action_classification(args):
             actor_out = F.sigmoid(actor_out)
             action_out = F.sigmoid(action_out)
 
-            #total_res.append(actor_out.detach().cpu().numpy())
-            #total_label.append(actor_labels.cpu().numpy())
+            # total_res.append(actor_out.detach().cpu().numpy())
+            # total_label.append(actor_labels.cpu().numpy())
             total_res.append(action_out.detach().cpu().numpy())
             total_label.append(action_labels.cpu().numpy())
 
@@ -263,6 +268,6 @@ def eval_actor_or_action_classification(args):
 
 if __name__ == '__main__':
     args = p_parse()
-    #eval_joint_classification(args)
-    eval_split_classification(args)
-    #eval_actor_or_action_classification(args)
+    eval_joint_classification(args)
+    # eval_split_classification(args)
+    # eval_actor_or_action_classification(args)

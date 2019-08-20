@@ -19,6 +19,7 @@ import cv2
 
 from model.backbone import res_block_50
 
+
 class JointClassifier(nn.Module):
 
     def __init__(self, backbone, args):
@@ -37,6 +38,16 @@ class JointClassifier(nn.Module):
         out = self.fc2(fc)
 
         return out, fc
+
+    def draw_cam(self, x):
+        last_conv = self.backbone(x)
+        last_conv.requires_grad_()
+        last_conv.retain_grad()
+
+        fc = self.adapool(last_conv).squeeze()
+        out = self.fc2(fc)
+
+        return out, last_conv
 
 
 class SplitClassifier(nn.Module):
@@ -68,6 +79,7 @@ def getJointClassifier(args):
     net = JointClassifier(backbone=res_block_50(args), args=args)
 
     return net
+
 
 def getSplitClassifier(args):
     net = SplitClassifier(backbone=res_block_50(args), args=args)
