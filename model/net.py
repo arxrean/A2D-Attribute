@@ -49,6 +49,15 @@ class JointClassifier(nn.Module):
 
         return out, last_conv
 
+    def gen_feature(self,x):
+        last_conv = self.backbone(x)
+        last_conv.requires_grad_()
+        last_conv.retain_grad()
+
+        fc = self.adapool(last_conv).squeeze()
+
+        return fc
+
 
 class SplitClassifier(nn.Module):
     def __init__(self, backbone, args):
