@@ -11,7 +11,7 @@ import numpy as np
 
 from loader.A2DClsLoader import A2DClassification
 from model.net import getJointClassifier
-from global import p_parse
+from glob import p_parse
 
 from keras.utils import to_categorical
 
@@ -29,11 +29,10 @@ def gen_joint_feature(args):
                             pin_memory=True, drop_last=False, shuffle=False)
 
     model = getJointClassifier(args)
-    if args.cuda:
-        model = model.cuda()
-
     model.load_state_dict(torch.load(os.path.join(
         args.save_root, 'joint_classification/snap_25.pth.tar'), map_location='cpu')['state_dict'])
+    if args.cuda:
+        model = model.cuda()
 
     total_id = []
     total_res = []
