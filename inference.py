@@ -24,7 +24,7 @@ def gen_joint_feature(args):
                              [0.2093, 0.2065, 0.2046])
     ])
 
-    val_dataset = A2DClassification(args, val_transform, mode='val')
+    val_dataset = A2DClassification(args, val_transform, mode='train')
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
@@ -51,9 +51,9 @@ def gen_joint_feature(args):
             total_id.append(id)
             total_res.append(fc.detach().cpu().numpy())
 
-    total_id = np.concatenate(id, axis=0)
+    total_id = np.concatenate(total_id, axis=0)
     total_res = np.concatenate(total_res, axis=0)
-    np.save([total_id, total_res], './repo/joint_img_feature.npy')
+    np.save('./repo/joint_img_feature.npy', {'id': total_id, 'res': total_res})
 
 
 if __name__ == '__main__':
