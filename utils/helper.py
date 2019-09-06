@@ -34,15 +34,14 @@ def np_sigmoid(x, derivative=False):
 
 
 class bce_weight_loss:
-    def __init__(self, args, reduce=True, mean=True, nouse=False):
+    def __init__(self, args, reduce=True, mean=True):
         self.reduce = reduce
         self.mean = mean
         self.args = args
-        self.nouse = nouse
         self.criterion = None
 
-    def get_loss(self, output, target):
-        if self.nouse:
+    def get_loss(self, output, target, nouse=False):
+        if nouse:
             return nn.BCEWithLogitsLoss()(output, target)
         pos_weight = get_pos_weight(target, self.args)
         if self.args.cuda:
