@@ -11,197 +11,225 @@ import shutil
 import matplotlib.pyplot as plt
 
 from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
+from loader.A2DCompositionLoader import A2DComposition
 from model.net import getJointClassifier, getSplitClassifier
 from utils.opt import get_finetune_optimizer
 from utils.helper import get_pos_weight, bce_weight_loss
+from glob import p_parse
+
 
 def joint_classification(args):
-	train_transform = transforms.Compose([
-		transforms.RandomResizedCrop((args.input_size, args.input_size)),
-		transforms.RandomHorizontalFlip(),
-		transforms.ToTensor(),
-		transforms.Normalize([0.4569, 0.4335, 0.3892],
-							 [0.2093, 0.2065, 0.2046])
-	])
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop((args.input_size, args.input_size)),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
 
-	val_transform = transforms.Compose([
-		transforms.Resize((args.input_size, args.input_size)),
-		transforms.ToTensor(),
-		transforms.Normalize([0.4569, 0.4335, 0.3892],
-							 [0.2093, 0.2065, 0.2046])
-	])
+    val_transform = transforms.Compose([
+        transforms.Resize((args.input_size, args.input_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
 
-	train_dataset = A2DClassification(args, train_transform)
-	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
-							  pin_memory=True, drop_last=True, shuffle=True)
+    train_dataset = A2DClassification(args, train_transform)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
+                              pin_memory=True, drop_last=True, shuffle=True)
 
-	val_dataset = A2DClassification(args, val_transform, mode='val')
-	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
-							pin_memory=True, drop_last=False, shuffle=False)
+    val_dataset = A2DClassification(args, val_transform, mode='val')
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
+                            pin_memory=True, drop_last=False, shuffle=False)
 
-	model = getJointClassifier(args)
-	if args.cuda:
-		model = model.cuda()
+    model = getJointClassifier(args)
+    if args.cuda:
+        model = model.cuda()
 
-	criterion = None
-	if args.cuda:
-		criterion = nn.BCEWithLogitsLoss(pos_weight=torch.from_numpy(
-			np.load('./repo/joint_label_frac.npy')).type(torch.FloatTensor).cuda())
-	else:
-		criterion = nn.BCEWithLogitsLoss(pos_weight=torch.from_numpy(
-			np.load('./repo/joint_label_frac.npy')).type(torch.FloatTensor))
+    criterion = bce_weight_loss(args=args)
 
-	if os.path.exists('./save/joint_classification/snap/'):
-		shutil.rmtree('./save/joint_classification/snap/')
-	os.makedirs('./save/joint_classification/snap/')
+    if os.path.exists('./save/joint_classification/snap/'):
+        shutil.rmtree('./save/joint_classification/snap/')
+    os.makedirs('./save/joint_classification/snap/')
 
-	train_loss = []
-	val_loss = []
-	for epoch in range(args.max_epoches):
-		opt = get_finetune_optimizer(args, model, epoch)
+    train_loss = []
+    val_loss = []
+    for epoch in range(args.max_epoches):
+        opt = get_finetune_optimizer(args, model, epoch)
 
-		train_loss.append(0)
-		val_loss.append(0)
-		for iter, pack in enumerate(train_loader):
-			imgs = pack[1]  # (N,t,c,m,n)
-			labels = pack[2]  # (N,t,c,m,n)
+        train_loss.append(0)
+        val_loss.append(0)
+        for iter, pack in enumerate(train_loader):
+            imgs = pack[1]  # (N,t,c,m,n)
+            labels = pack[2]  # (N,t,c,m,n)
 
-			if args.cuda:
-				imgs = imgs.cuda()
-				labels = labels.cuda()
+            if args.cuda:
+                imgs = imgs.cuda()
+                labels = labels.cuda()
 
-			out, fc = model(imgs)
-			loss = criterion(out, labels)
-			opt.zero_grad()
-			loss.backward()
-			opt.step()
+            out, fc = model(imgs)
+            loss = criterion.get_loss(out, labels)
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
 
-			train_loss[-1] += loss.item()
+            train_loss[-1] += loss.item()
 
-		with torch.no_grad():
-			for iter, pack in enumerate(val_loader):
-				imgs = pack[1]  # (N,t,c,m,n)
-				labels = pack[2]  # (N,t,c,m,n)
+        with torch.no_grad():
+            for iter, pack in enumerate(val_loader):
+                imgs = pack[1]  # (N,t,c,m,n)
+                labels = pack[2]  # (N,t,c,m,n)
 
-				if args.cuda:
-					imgs = imgs.cuda()
-					labels = labels.cuda()
+                if args.cuda:
+                    imgs = imgs.cuda()
+                    labels = labels.cuda()
 
-				out, fc = model(imgs)
-				loss = criterion(out, labels)
+                out, fc = model(imgs)
+                loss = criterion.get_loss(out, labels, nouse=True)
 
-				val_loss[-1] += loss.item()
+                val_loss[-1] += loss.item()
 
-		print('epoch:{} train_loss:{:.3f} val_loss:{:.4f}'.format(
-			epoch, train_loss[-1], val_loss[-1]), flush=True)
-		snap_shot = {'epoch': epoch, 'train_loss': train_loss,
-					 'val_loss': val_loss, 'state_dict': model.state_dict()}
-		torch.save(
-			snap_shot, './save/joint_classification/snap/snap_{}.pth.tar'.format(epoch))
+        print('epoch:{} train_loss:{:.3f} val_loss:{:.4f}'.format(
+            epoch, train_loss[-1], val_loss[-1]), flush=True)
+
+        # plot
+        plt.plot(range(len(train_loss)), train_loss, label='train_loss')
+        plt.plot(range(len(val_loss)), val_loss, label='val_loss')
+        plt.legend()
+        if not os.path.exists('./save/joint_classification/imgs'):
+            os.makedirs('./save/joint_classification/imgs')
+        plt.savefig('./save/joint_classification/imgs/train_line.png')
+        plt.close()
+
+        snap_shot = {'epoch': epoch, 'train_loss': train_loss,
+                     'val_loss': val_loss, 'state_dict': model.state_dict()}
+        torch.save(
+            snap_shot, './save/joint_classification/snap/snap_{}.pth.tar'.format(epoch))
 
 
 def split_classification(args):
-	train_transform = transforms.Compose([
-		transforms.RandomResizedCrop((args.input_size, args.input_size)),
-		transforms.RandomHorizontalFlip(),
-		transforms.ToTensor(),
-		transforms.Normalize([0.4569, 0.4335, 0.3892],
-							 [0.2093, 0.2065, 0.2046])
-	])
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop((args.input_size, args.input_size)),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
 
-	val_transform = transforms.Compose([
-		transforms.Resize((args.input_size, args.input_size)),
-		transforms.ToTensor(),
-		transforms.Normalize([0.4569, 0.4335, 0.3892],
-							 [0.2093, 0.2065, 0.2046])
-	])
+    val_transform = transforms.Compose([
+        transforms.Resize((args.input_size, args.input_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
 
-	train_dataset = A2DClassificationWithActorAction(args, train_transform)
-	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
-							  pin_memory=True, drop_last=True, shuffle=True)
+    train_dataset = A2DClassificationWithActorAction(args, train_transform)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
+                              pin_memory=True, drop_last=True, shuffle=True)
 
-	val_dataset = A2DClassificationWithActorAction(
-		args, val_transform, mode='val')
-	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
-							pin_memory=True, drop_last=False, shuffle=False)
+    val_dataset = A2DClassificationWithActorAction(
+        args, val_transform, mode='val')
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
+                            pin_memory=True, drop_last=False, shuffle=False)
 
-	model = getSplitClassifier(args)
-	if args.cuda:
-		model = model.cuda()
+    model = getSplitClassifier(args)
+    if args.cuda:
+        model = model.cuda()
 
-	criterion = bce_weight_loss(args=args)
+    criterion = bce_weight_loss(args=args)
 
-	if os.path.exists('./save/split_classification/snap/'):
-		shutil.rmtree('./save/split_classification/snap/')
-	os.makedirs('./save/split_classification/snap/')
+    if os.path.exists('./save/split_classification/snap/'):
+        shutil.rmtree('./save/split_classification/snap/')
+    os.makedirs('./save/split_classification/snap/')
 
-	train_loss = []
-	val_top1_acc = []
-	for epoch in range(args.max_epoches):
-		opt = get_finetune_optimizer(args, model, epoch)
+    train_loss = []
+    val_top1_acc = []
+    for epoch in range(args.max_epoches):
+        opt = get_finetune_optimizer(args, model, epoch)
 
-		plt.figure()
-		train_loss.append(0)
-		val_top1_acc.append([])
-		for iter, pack in enumerate(train_loader):
-			imgs = pack[0]  # (N,t,c,m,n)
-			actor_labels = pack[2]
-			action_labels = pack[3]
+        plt.figure()
+        train_loss.append(0)
+        val_top1_acc.append([])
+        for iter, pack in enumerate(train_loader):
+            imgs = pack[0]  # (N,t,c,m,n)
+            actor_labels = pack[2]
+            action_labels = pack[3]
 
-			if args.cuda:
-				imgs = imgs.cuda()
-				actor_labels = actor_labels.cuda()
-				action_labels = action_labels.cuda()
+            if args.cuda:
+                imgs = imgs.cuda()
+                actor_labels = actor_labels.cuda()
+                action_labels = action_labels.cuda()
 
-			actor_out, action_out = model(imgs)
-			actor_loss = criterion.get_loss(actor_out, actor_labels)
-			action_loss = criterion.get_loss(
-				action_out, action_labels)
-			opt.zero_grad()
-			(actor_loss+action_loss).backward()
-			opt.step()
+            actor_out, action_out = model(imgs)
+            actor_loss = criterion.get_loss(actor_out, actor_labels)
+            action_loss = criterion.get_loss(
+                action_out, action_labels)
+            opt.zero_grad()
+            (actor_loss+action_loss).backward()
+            opt.step()
 
-			train_loss[-1] += actor_loss.item()+action_loss.item()
+            train_loss[-1] += actor_loss.item()+action_loss.item()
 
-		with torch.no_grad():
-			for iter, pack in enumerate(val_loader):
-				imgs = pack[0]  # (N,t,c,m,n)
-				actor_labels = pack[2]
-				action_labels = pack[3]
+        with torch.no_grad():
+            for iter, pack in enumerate(val_loader):
+                imgs = pack[0]  # (N,t,c,m,n)
+                actor_labels = pack[2]
+                action_labels = pack[3]
 
-				if args.cuda:
-					imgs = imgs.cuda()
-					actor_labels = actor_labels.cuda()
-					action_labels = action_labels.cuda()
+                if args.cuda:
+                    imgs = imgs.cuda()
+                    actor_labels = actor_labels.cuda()
+                    action_labels = action_labels.cuda()
 
-				actor_out, action_out = model(imgs)
+                actor_out, action_out = model(imgs)
 
-				res=torch.sigmoid(actor_out).detach().cpu().numpy()>0.5
-				gt=actor_labels.cpu().numpy()>0.5
-				val_top1_acc[-1].extend((res==gt).reshape(-1))
+                res = torch.sigmoid(actor_out).detach().cpu().numpy() > 0.5
+                gt = actor_labels.cpu().numpy() > 0.5
+                val_top1_acc[-1].extend((res == gt).reshape(-1))
 
-		val_top1_acc[-1] = np.mean(val_top1_acc[-1])
-		print('epoch:{} train_loss:{:.3f} val_acc:{:.3f}'.format(
-			epoch, train_loss[-1], val_top1_acc[-1]), flush=True)
+        val_top1_acc[-1] = np.mean(val_top1_acc[-1])
+        print('epoch:{} train_loss:{:.3f} val_acc:{:.3f}'.format(
+            epoch, train_loss[-1], val_top1_acc[-1]), flush=True)
 
-		# plot
-		plt.plot(range(len(train_loss)), train_loss, label='train_loss')
-		plt.plot(range(len(val_top1_acc)), val_top1_acc, label='val_acc')
-		plt.legend()
-		if not os.path.exists('./save/split_classification/imgs'):
-			os.makedirs('./save/split_classification/imgs')
-		plt.savefig('./save/split_classification/imgs/train_line.png')
-		plt.close()
+        # plot
+        plt.plot(range(len(train_loss)), train_loss, label='train_loss')
+        plt.plot(range(len(val_top1_acc)), val_top1_acc, label='val_acc')
+        plt.legend()
+        if not os.path.exists('./save/split_classification/imgs'):
+            os.makedirs('./save/split_classification/imgs')
+        plt.savefig('./save/split_classification/imgs/train_line.png')
+        plt.close()
 
-		# save
-		snap_shot = {'epoch': epoch, 'train_loss': train_loss,
-					 'val_acc': val_top1_acc, 'state_dict': model.state_dict()}
-		torch.save(
-			snap_shot, './save/split_classification/snap/snap_{}.pth.tar'.format(epoch))
+        # save
+        snap_shot = {'epoch': epoch, 'train_loss': train_loss,
+                     'val_acc': val_top1_acc, 'state_dict': model.state_dict()}
+        torch.save(
+            snap_shot, './save/split_classification/snap/snap_{}.pth.tar'.format(epoch))
+
+
+def composition_train(args):
+    train_transform = transforms.Compose([
+        transforms.RandomResizedCrop((args.input_size, args.input_size)),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
+
+    val_transform = transforms.Compose([
+        transforms.Resize((args.input_size, args.input_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
+
+    train_dataset = A2DComposition(args, train_transform, mode='train')
+    val_dataset = A2DComposition(args, train_transform, mode='train')
 
 
 if __name__ == '__main__':
-	args = p_parse()
-	# joint_classification(args)
-	split_classification(args)
-	# split_classification_total_frac(args)
+    args = p_parse()
+    joint_classification(args)
+    # split_classification(args)
+    # composition_train(args)
+    

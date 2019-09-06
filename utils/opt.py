@@ -10,7 +10,7 @@ def get_optimizer(args, model, epoch):
 
 
 def get_finetune_optimizer(args, model, epoch):
-    lr = args.lr*(args.lr_dec**epoch)
+    lr = args.lr
     weight_list = []
     bias_list = []
     last_weight_list = []

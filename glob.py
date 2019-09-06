@@ -5,7 +5,7 @@ def p_parse():
 	parser.add_argument("--session_name", default="a2d", type=str)
 	# data
 	parser.add_argument(
-		"--a2d_root", default='E:/A2D/Release', type=str)
+		"--a2d_root", default='/u/zkou2/Data/A2D/Release', type=str)
 	parser.add_argument('--csv_path', default='./repo/newVideoSet.csv')
 	parser.add_argument('--t', type=int, default=0)
 	parser.add_argument('--input_size', type=int, default=224)
@@ -15,7 +15,7 @@ def p_parse():
 	# config
 	parser.add_argument("--num_workers", default=8, type=int)
 	parser.add_argument("--batch_size", default=48, type=int)
-	parser.add_argument("--max_epoches", default=1000, type=int)
+	parser.add_argument("--max_epoches", default=120, type=int)
 	parser.add_argument("--cuda", default=False, type=bool)
 	parser.add_argument("--pretrained", default=True, type=bool)
 	# train
