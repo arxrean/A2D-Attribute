@@ -88,7 +88,6 @@ def load_word_embeddings(emb_file, vocab):
 
     vocab = [v.lower() for v in vocab]
 
-    pdb.set_trace()
     embeds = torch.from_numpy(np.load(emb_file))
 
     return embeds

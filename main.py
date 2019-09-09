@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
 from loader.A2DCompositionLoader import A2DComposition
 from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
-from utils.opt import get_finetune_optimizer
+from utils.opt import get_finetune_optimizer, get_op_optimizer
 from utils.helper import get_pos_weight, bce_weight_loss
 from glob import p_parse
 
@@ -217,7 +217,8 @@ def composition_train(args):
     ])
 
     val_transform = transforms.Compose([
-        transforms.Resize((args.input_size, args.input_size)),
+        transforms.Resize((args.input_size+32, args.input_size+32)),
+        transforms.CenterCrop((args.input_size, args.input_size)),
         transforms.ToTensor(),
         transforms.Normalize([0.4569, 0.4335, 0.3892],
                              [0.2093, 0.2065, 0.2046])
@@ -226,7 +227,20 @@ def composition_train(args):
     train_dataset = A2DComposition(args, train_transform, mode='train')
     val_dataset = A2DComposition(args, train_transform, mode='train')
 
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0,
+                              pin_memory=True, drop_last=True, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
+                            pin_memory=True, drop_last=False, shuffle=False)
+
     model = ManifoldModel(dset=train_dataset, args=args)
+    if args.cuda:
+        model.cuda()
+
+    for epoch in range(args.max_epoches):
+        opt = get_op_optimizer(args, model, epoch)
+
+        for iter, pack in enumerate(train_loader):
+            pass
 
 
 if __name__ == '__main__':

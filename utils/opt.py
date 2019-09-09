@@ -34,3 +34,15 @@ def get_finetune_optimizer(args, model, epoch):
                        {'params': bias_list, 'lr': lr*2},
                        {'params': last_weight_list, 'lr': lr*10},
                        {'params': last_bias_list, 'lr': lr*20}], weight_decay=args.wt_dec)
+
+
+def get_op_optimizer(args, model, epoch):
+    attr_params = [param for name, param in model.named_parameters(
+    ) if 'attr_op' in name and param.requires_grad]
+    other_params = [param for name, param in model.named_parameters(
+    ) if 'attr_op' not in name and param.requires_grad]
+    optim_params = [{'params': attr_params,
+                     'lr': 0.1*args.lr}, {'params': other_params}]
+    optimizer = optim.Adam(optim_params, lr=args.lr, weight_decay=args.wt_dec)
+
+    return optimizer
