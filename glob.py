@@ -5,7 +5,7 @@ def p_parse():
 	parser.add_argument("--session_name", default="a2d", type=str)
 	# data
 	parser.add_argument(
-		"--a2d_root", default='E:/A2D/Release', type=str)
+		"--a2d_root", default='/u/zkou2/Data/A2D/Release', type=str)
 	parser.add_argument('--csv_path', default='./repo/newVideoSet.csv')
 	parser.add_argument('--t', type=int, default=0)
 	parser.add_argument('--input_size', type=int, default=224)
@@ -22,6 +22,7 @@ def p_parse():
 	parser.add_argument("--lr", default=1e-5, type=float)
 	parser.add_argument("--lr_dec", default=1, type=float)
 	parser.add_argument("--wt_dec", default=5e-4, type=float)
+	parser.add_argument("--op_img_dim", default=300, type=int)
 	# save
 	parser.add_argument("--save_root", default='./save/', type=str)
 	# feature

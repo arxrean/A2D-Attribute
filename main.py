@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
 from loader.A2DCompositionLoader import A2DComposition
-from model.net import getJointClassifier, getSplitClassifier
+from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
 from utils.opt import get_finetune_optimizer
 from utils.helper import get_pos_weight, bce_weight_loss
 from glob import p_parse
@@ -225,6 +225,8 @@ def composition_train(args):
 
     train_dataset = A2DComposition(args, train_transform, mode='train')
     val_dataset = A2DComposition(args, train_transform, mode='train')
+
+    model = ManifoldModel(dset=train_dataset, args=args)
 
 
 if __name__ == '__main__':
