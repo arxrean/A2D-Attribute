@@ -70,6 +70,10 @@ class A2DComposition(tdata.Dataset):
         return all_actions, all_actors, all_pairs, tr_pairs, ts_pairs
 
     def getstringlabel(self, labels):
+        indexPair = []
+        indexActors = []
+        indexActions = []
+
         pairs = []
         actors = []
         actions = []
@@ -78,14 +82,21 @@ class A2DComposition(tdata.Dataset):
             label_list = item.split(' ')
             for label in label_list:
                 label = int(float(label))
-                strActor = self.actors_dict[label // 10]
-                strAction = self.actions_dict[label % 10]
-                actors.append(strActor)
-                actions.append(strAction)
-                pairs.append(strActor + ' ' + strAction)
-        actors = np.unique(actors).tolist()
-        actions = np.unique(actions).tolist()
-        pairs = np.unique(pairs).tolist()
+                
+                indexPair.append(label)
+                indexActors.append(label // 10)
+                indexActions.append(label % 10)
+
+        indexActors = sorted(np.unique(indexActors).tolist())
+        indexActions = sorted(np.unique(indexActions).tolist())
+        indexPair = sorted(np.unique(indexPair).tolist())
+
+        for item in indexActors:
+            actors.append(self.actors_dict[item])
+        for item in indexActions:
+            actions.append(self.actions_dict[item])
+        for item in indexPair:
+            pairs.append(self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10])
 
         return actors, actions, pairs
 
