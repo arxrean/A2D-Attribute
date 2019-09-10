@@ -47,7 +47,6 @@ class A2DComposition(tdata.Dataset):
         self.feat_dim = len(activation_data['res'][0])  # d
 
     def parse_split(self):
-        ##################
         tr_actions = []
         tr_actors = []
         tr_pairs = []
@@ -59,25 +58,27 @@ class A2DComposition(tdata.Dataset):
         tr_labels = self.csv[self.csv['usage'] == 0]['label'].values
         ts_labels = self.csv[self.csv['usage'] == 1]['label'].values
 
-        tr_actors, tr_actions, tr_pairs = self.getstringlabel(tr_labels)
-        ts_actors, ts_actions, ts_pairs = self.getstringlabel(ts_labels)
-        ##################
+        tr_actors, tr_actions, tr_pairs = self.getlabel(tr_labels)
+        ts_actors, ts_actions, ts_pairs = self.getlabel(ts_labels)
 
         all_actions, all_actors = sorted(
             list(set(tr_actions+ts_actions))), sorted(list(set(tr_actors+ts_actors)))
         all_pairs = sorted(list(set(tr_pairs + ts_pairs)))
 
+        all_actions = self.indexaction2string(all_actions)
+        all_actors = self.indexactor2string(all_actors)
+        all_pairs = self.indexpair2string(all_pairs)
+
+        tr_pairs = self.indexpair2string(tr_pairs)
+        ts_pairs = self.indexpair2string(ts_pairs)
+
         return all_actions, all_actors, all_pairs, tr_pairs, ts_pairs
 
-    def getstringlabel(self, labels):
+    def getlabel(self, labels):
         indexPair = []
         indexActors = []
         indexActions = []
-
-        pairs = []
-        actors = []
-        actions = []
-
+        
         for item in labels:
             label_list = item.split(' ')
             for label in label_list:
@@ -86,19 +87,30 @@ class A2DComposition(tdata.Dataset):
                 indexPair.append(label)
                 indexActors.append(label // 10)
                 indexActions.append(label % 10)
-
+        
         indexActors = sorted(np.unique(indexActors).tolist())
         indexActions = sorted(np.unique(indexActions).tolist())
         indexPair = sorted(np.unique(indexPair).tolist())
 
-        for item in indexActors:
-            actors.append(self.actors_dict[item])
-        for item in indexActions:
-            actions.append(self.actions_dict[item])
-        for item in indexPair:
-            pairs.append(self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10])
+        return indexActors, indexActions, indexPair
 
-        return actors, actions, pairs
+    def indexactor2string(self, indexlabel):
+        strlabel = []
+        for item in indexlabel:
+            strlabel.append(self.actors_dict[item])
+        return strlabel
+        
+    def indexaction2string(self, indexlabel):
+        strlabel = []
+        for item in indexlabel:
+            strlabel.append(self.actions_dict[item])
+        return strlabel
+        
+    def indexpair2string(self, indexlabel):
+        strlabel = []
+        for item in indexlabel:
+            strlabel.append(self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10])
+        return strlabel
 
     def get_split_info(self):
         # [img_path, [t img_path], [actor], [action]]
