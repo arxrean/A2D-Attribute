@@ -84,6 +84,7 @@ class SplitClassifier(nn.Module):
 
         return actor_out, action_out
 
+
 def load_word_embeddings(emb_file, vocab):
 
     vocab = [v.lower() for v in vocab]
@@ -91,6 +92,7 @@ def load_word_embeddings(emb_file, vocab):
     embeds = torch.from_numpy(np.load(emb_file))
 
     return embeds
+
 
 class MLP(nn.Module):
     def __init__(self, inp_dim, out_dim, num_layers=1, relu=True, bias=True):
@@ -124,19 +126,71 @@ class ManifoldModel(nn.Module):
             map(lambda x: x.split(' ')[1], self.dset.pairs))
         actions = [dset.action2idx[action] for action in actions]
         actors = [dset.actor2idx[actor] for actor in actors]
-        self.val_attrs = torch.LongTensor(actions).cuda() if args.cuda else torch.LongTensor(actions)
-        self.val_objs = torch.LongTensor(actors).cuda() if args.cuda else torch.LongTensor(actors)
+        self.val_attrs = torch.LongTensor(actions).cuda(
+        ) if args.cuda else torch.LongTensor(actions)
+        self.val_objs = torch.LongTensor(actors).cuda(
+        ) if args.cuda else torch.LongTensor(actors)
 
         # OP
         self.image_embedder = MLP(dset.feat_dim, args.op_img_dim)
         self.compare_metric = lambda img_feats, pair_embed: - \
             F.pairwise_distance(img_feats, pair_embed)
 
-        self.action_ops = nn.ParameterList([nn.Parameter(torch.eye(args.op_img_dim)) for _ in range(len(self.dset.actions))])
+        self.action_ops = nn.ParameterList(
+            [nn.Parameter(torch.eye(args.op_img_dim)) for _ in range(len(self.dset.actions))])
         self.obj_embedder = nn.Embedding(len(dset.actors), args.op_img_dim)
 
-        glove_pretrained_weight = load_word_embeddings('./repo/actors_glove.npy', dset.actors)
+        glove_pretrained_weight = load_word_embeddings(
+            './repo/actors_glove.npy', dset.actors)
         self.obj_embedder.weight.data.copy_(glove_pretrained_weight)
+
+    def train_forward(self, x):
+        img, actions, actors, neg_action, neg_actor = x[0], x[1], x[2], x[-2], x[-1]
+
+        actors = [torch.where(actor == 1)[0].cuda() if self.args.cuda else torch.where(
+            actor == 1)[0] for actor in actors]
+        actions = [torch.where(action == 1)[0] for action in actions]
+        neg_actor = [torch.where(actor == 1)[0].cuda() if self.args.cuda else torch.where(
+            actor == 1)[0] for actor in neg_actor]
+        neg_action = [torch.where(action == 1)[0] for action in neg_action]
+
+        loss=[]
+        # pdb.set_trace()
+
+        feature = self.image_embedder(img.cuda() if self.args.cuda else img)
+
+        # positive
+        actor_emb = torch.cat([torch.mean(self.obj_embedder(
+            actor), dim=0, keepdim=True) for actor in actors], dim=0)
+        pos_actions = torch.stack([torch.mean(torch.stack(
+            [self.action_ops[idx] for idx in action]), dim=0) for action in actions])
+        positive = self.apply_ops(pos_actions, actor_emb)
+
+        # negative
+        neg_actor_emb = torch.cat([torch.mean(self.obj_embedder(
+            actor), dim=0, keepdim=True) for actor in neg_actor], dim=0)
+        neg_actions = torch.stack([self.action_ops[action.item()]
+                               for action in neg_action])
+        negative = self.apply_ops(neg_actions, neg_actor_emb)
+
+        loss_triplet = F.triplet_margin_loss(
+            feature, positive, negative, margin=self.margin)
+        loss.append(loss_triplet)
+
+        loss = sum(loss)
+        return loss, None
+
+    def compose(self, actions, actors):
+        obj_rep = self.obj_embedder(actors)
+        attr_ops = torch.stack([self.action_ops[attr.item()]
+                                for attr in attrs])
+        embedded_reps = self.apply_ops(attr_ops, obj_rep)
+        return embedded_reps
+
+    def apply_ops(self, actions, actors):
+        out = torch.bmm(actions, actors.unsqueeze(2)).squeeze(2)
+        out = F.relu(out)
+        return out
 
 
 def getJointClassifier(args):

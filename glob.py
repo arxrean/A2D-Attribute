@@ -14,7 +14,7 @@ def p_parse():
 	parser.add_argument('--action_num', type=int, default=9)
 	# config
 	parser.add_argument("--num_workers", default=8, type=int)
-	parser.add_argument("--batch_size", default=64, type=int)
+	parser.add_argument("--batch_size", default=512, type=int)
 	parser.add_argument("--max_epoches", default=120, type=int)
 	parser.add_argument("--cuda", default=False, type=bool)
 	parser.add_argument("--pretrained", default=True, type=bool)

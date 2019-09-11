@@ -6,6 +6,8 @@ import os
 import pdb
 from PIL import Image
 
+from keras.utils import to_categorical
+
 
 class A2DComposition(tdata.Dataset):
     def __init__(self, args, transform=None, mode='train'):
@@ -83,7 +85,7 @@ class A2DComposition(tdata.Dataset):
             label_list = item.split(' ')
             for label in label_list:
                 label = int(float(label))
-                
+
                 indexPair.append(label)
                 indexActors.append(label // 10)
                 indexActions.append(label % 10)
@@ -92,6 +94,7 @@ class A2DComposition(tdata.Dataset):
         indexActions = sorted(np.unique(indexActions).tolist())
         indexPair = sorted(np.unique(indexPair).tolist())
 
+# <<<<<<< Updated upstream
         return indexActors, indexActions, indexPair
 
     def indexactor2string(self, indexlabel):
@@ -111,6 +114,17 @@ class A2DComposition(tdata.Dataset):
         for item in indexlabel:
             strlabel.append(self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10])
         return strlabel
+# =======
+#         for item in indexActors:
+#             actors.append(self.actors_dict[item])
+#         for item in indexActions:
+#             actions.append(self.actions_dict[item])
+#         for item in indexPair:
+#             pairs.append(self.actors_dict[item // 10] +
+#                          ' ' + self.actions_dict[item % 10])
+
+#         return actors, actions, pairs
+# >>>>>>> Stashed changes
 
     def get_split_info(self):
         # [img_path, [t img_path], [actor], [action]]
@@ -165,20 +179,29 @@ class A2DComposition(tdata.Dataset):
             return self.sample_negative(actions, actors)
         return self.action2idx[new_action], self.actor2idx[new_actor]
 
+    def idx2hot(self, idx_list, class_num):
+        label = to_categorical(idx_list, num_classes=class_num)
+        label = label.sum(axis=0)
+        label = np.where(label > 1, 1, label)
+
+        return label
+
     def __getitem__(self, index):
         img_path, t_img_path, actors, actions = self.data[index]
 
         if self.args.t == 0:
             img = self.transform(Image.open(img_path).convert('RGB'))
-            data = [img, [self.action2idx[action] for action in actions], [self.actor2idx[actor]
-                                                                           for actor in actors], [self.pair2idx['{} {}'.format(actors[i], actions[i])] for i in range(len(actors))]]
-            pdb.set_trace()
+            data = [img, self.idx2hot([self.action2idx[action] for action in actions], class_num=len(self.actions)), self.idx2hot([self.actor2idx[actor] for actor in actors], class_num=len(
+                self.actors)), self.idx2hot([self.pair2idx['{} {}'.format(actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]
             if self.mode == 'train':
                 neg_action, neg_actor = self.sample_negative(actions, actors)
-                data += [neg_action, neg_actor]
+                data += [self.idx2hot([neg_action], class_num=len(self.actions)),
+                         self.idx2hot([neg_actor], class_num=len(self.actors))]
 
+            # pdb.set_trace()
             if self.activations is not None:
-                data[0] = torch.from_numpy(self.activations[img_path[img_path.index('pngs320H'):]])
+                data[0] = torch.from_numpy(
+                    self.activations[img_path[img_path.index('pngs320H'):]])
 
             return data
 
