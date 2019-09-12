@@ -15,7 +15,7 @@ from loader.A2DCompositionLoader import A2DComposition
 from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
 from utils.opt import get_finetune_optimizer, get_op_optimizer
 from utils.helper import get_pos_weight, bce_weight_loss
-from glob import p_parse
+from Glob.glob import p_parse
 
 
 def joint_classification(args):
