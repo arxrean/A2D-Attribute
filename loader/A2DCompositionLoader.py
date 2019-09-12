@@ -182,7 +182,7 @@ class A2DComposition(tdata.Dataset):
     def idx2hot(self, idx_list, class_num):
         label = to_categorical(idx_list, num_classes=class_num)
         label = label.sum(axis=0)
-        label = np.where(label > 1, 1, label)
+        #label = np.where(label > 1, 1, label)
 
         return label
 
@@ -191,8 +191,7 @@ class A2DComposition(tdata.Dataset):
 
         if self.args.t == 0:
             img = self.transform(Image.open(img_path).convert('RGB'))
-            data = [img, self.idx2hot([self.action2idx[action] for action in actions], class_num=len(self.actions)), self.idx2hot([self.actor2idx[actor] for actor in actors], class_num=len(
-                self.actors)), self.idx2hot([self.pair2idx['{} {}'.format(actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]
+            data = [img, self.idx2hot([self.pair2idx['{} {}'.format(actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]
             if self.mode == 'train':
                 neg_action, neg_actor = self.sample_negative(actions, actors)
                 data += [self.idx2hot([neg_action], class_num=len(self.actions)),
