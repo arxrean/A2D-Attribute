@@ -144,15 +144,50 @@ class ManifoldModel(nn.Module):
             './repo/actors_glove.npy', dset.actors)
         self.obj_embedder.weight.data.copy_(glove_pretrained_weight)
 
-    def train_forward(self, x):
-        img, actions, actors, neg_action, neg_actor = x[0], x[1], x[2], x[-2], x[-1]
+        self.valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8,
+                      22: 9, 26: 10, 28: 11, 29: 12, 34: 13, 35: 14, 36: 15, 39: 16,
+                      41: 17, 43: 18, 44: 19, 45: 20, 46: 21, 48: 22, 49: 23, 54: 24,
+                      55: 25, 56: 26, 57: 27, 59: 28, 61: 29, 63: 30, 65: 31, 66: 32,
+                      67: 33, 68: 34, 69: 35, 72: 36, 73: 37, 75: 38, 76: 39, 77: 40,
+                      78: 41, 79: 42}
+        self.valid_actor = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6}
+        self.valid_action = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8}
+        
+    def onehot2idx(self, pairs):
+        #actors = actors.numpy()
+        #actions = actions.numpy()
+        #pairs = pairs.numpy()
+        actors_idx = []
+        actions_idx = []
 
+        for pair in pairs.numpy():
+            pairindexs = np.where(pair==1)[0]
+            actor_idx = []
+            action_idx = []
+            for pairindex in pairindexs:
+                pairlabel = list(self.valid.keys())[list(self.valid.values()).index(pairindex)]
+                actor_idx.append(self.valid_actor[pairlabel // 10])
+                action_idx.append(self.valid_action[pairlabel % 10])
+            actors_idx.append(torch.Tensor(actor_idx))
+            actions_idx.append(torch.Tensor(action_idx))
+        return actors_idx, actions_idx
+
+    def train_forward(self, x):
+        img, pairs, neg_action, neg_actor = x[0], x[1], x[-2], x[-1]
+
+        actors, actions = self.onehot2idx(pairs)
+
+        neg_actor = [torch.Tensor([i]) for i in np.where(neg_actor.numpy()==1)[1]]
+        neg_action = [torch.Tensor([i]) for i in np.where(neg_action.numpy()==1)[1]]
+
+        '''
         actors = [torch.where(actor == 1)[0].cuda() if self.args.cuda else torch.where(
             actor == 1)[0] for actor in actors]
         actions = [torch.where(action == 1)[0] for action in actions]
         neg_actor = [torch.where(actor == 1)[0].cuda() if self.args.cuda else torch.where(
             actor == 1)[0] for actor in neg_actor]
         neg_action = [torch.where(action == 1)[0] for action in neg_action]
+        '''
 
         loss=[]
         # pdb.set_trace()
@@ -160,17 +195,15 @@ class ManifoldModel(nn.Module):
         feature = self.image_embedder(img.cuda() if self.args.cuda else img)
 
         # positive
-        actor_emb = torch.cat([torch.mean(self.obj_embedder(
-            actor), dim=0, keepdim=True) for actor in actors], dim=0)
-        pos_actions = torch.stack([torch.mean(torch.stack(
-            [self.action_ops[idx] for idx in action]), dim=0) for action in actions])
+        #512,300 512,300,300
+        actor_emb = [self.obj_embedder(actor) for actor in actors]
+        pos_actions = [[self.action_ops[idx] for idx in action] for action in actions]
+        
         positive = self.apply_ops(pos_actions, actor_emb)
 
         # negative
-        neg_actor_emb = torch.cat([torch.mean(self.obj_embedder(
-            actor), dim=0, keepdim=True) for actor in neg_actor], dim=0)
-        neg_actions = torch.stack([self.action_ops[action.item()]
-                               for action in neg_action])
+        neg_actor_emb = [self.obj_embedder(actor) for actor in neg_actor]
+        neg_actions = [[self.action_ops[action.item()]] for action in neg_action]
         negative = self.apply_ops(neg_actions, neg_actor_emb)
 
         loss_triplet = F.triplet_margin_loss(
