@@ -11,7 +11,7 @@ import numpy as np
 
 from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
 from model.net import getJointClassifier, getSplitClassifier
-from global import p_parse
+from glob import p_parse
 
 from keras.utils import to_categorical
 
@@ -57,9 +57,9 @@ def get_eval(X_pre, X_gt):
         f1 = F1(X_pre_new, X_gt)
         recall = Recall(X_pre_new, X_gt)
         pre = Precision(X_pre_new, X_gt)
-        print('threshold:{}'.format(thd))
-        print('f1:{}'.format(f1))
-        print()
+        #print('threshold:{}'.format(thd))
+        #print('f1:{}'.format(f1))
+        #print()
         # print('prec:{}'.format(pre))
         # print('recall:{}'.format(recall))
 
@@ -72,6 +72,7 @@ def get_eval(X_pre, X_gt):
     print('best f1:{}'.format(best_f1))
     print('best prec:{}'.format(best_prec))
     print('best recall:{}'.format(best_recall))
+    print()
     return Threshold, best_f1, best_prec, best_recall
 
 
@@ -91,28 +92,51 @@ def eval_joint_classification(args):
     if args.cuda:
         model = model.cuda()
 
-    model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'joint_classification/snap_25.pth.tar'), map_location='cpu')['state_dict'])
+    Threshold = None
+    best_f1 =None
+    best_prec = None
+    best_recall = None
+    bestmodelNum = None
+    for i in range(120):
+        filename = 'snap_'+str(i)+'.pth.tar'
+        print(filename)
+        model.load_state_dict(torch.load(os.path.join(
+            args.save_root, 'joint_classification/new_snap/', filename), map_location='cpu')['state_dict'])
+        '''
+        model.load_state_dict(torch.load(os.path.join(
+            args.save_root, 'joint_classification/snap_25.pth.tar'), map_location='cpu')['state_dict'])
+        '''
+        
+        total_res = []
+        total_label = []
+        with torch.no_grad():
+            for iter, pack in enumerate(val_loader):
+                imgs = pack[1]  # (N,t,c,m,n)
+                labels = pack[2]  # (N,t,c,m,n)
 
-    total_res = []
-    total_label = []
-    with torch.no_grad():
-        for iter, pack in enumerate(val_loader):
-            imgs = pack[1]  # (N,t,c,m,n)
-            labels = pack[2]  # (N,t,c,m,n)
+                if args.cuda:
+                    imgs = imgs.cuda()
+                    labels = labels.cuda()
 
-            if args.cuda:
-                imgs = imgs.cuda()
-                labels = labels.cuda()
+                out, fc = model(imgs)
+                out = F.sigmoid(out)
+                total_res.append(out.detach().cpu().numpy())
+                total_label.append(labels.cpu().numpy())
 
-            out, fc = model(imgs)
-            out = F.sigmoid(out)
-            total_res.append(out.detach().cpu().numpy())
-            total_label.append(labels.cpu().numpy())
-
-    total_res = np.concatenate(total_res, axis=0)
-    total_label = np.concatenate(total_label, axis=0)
-    get_eval(total_res, total_label)
+        total_res = np.concatenate(total_res, axis=0)
+        total_label = np.concatenate(total_label, axis=0)
+        thd, f1, prec, recall = get_eval(total_res, total_label)
+        if best_f1 is None or f1 > best_f1:
+            best_f1 = f1
+            best_prec = prec
+            best_recall = recall
+            Threshold = thd
+            bestmodelNum = i
+    print('best model:{}'.format(bestmodelNum))
+    print('best threshold:{}'.format(Threshold))
+    print('best f1:{}'.format(best_f1))
+    print('best prec:{}'.format(best_prec))
+    print('best recall:{}'.format(best_recall))
 
 
 def eval_split_classification(args):
