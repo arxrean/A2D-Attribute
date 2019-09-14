@@ -15,6 +15,8 @@ from glob import p_parse
 
 from keras.utils import to_categorical
 
+from sklearn.metrics import average_precision_score
+
 def Precision(X_pre, X_gt):
     N = len(X_pre)
     p = 0.0
@@ -24,6 +26,20 @@ def Precision(X_pre, X_gt):
         p += np.sum(x*y)/(np.sum(x) + 1e-8)
     return p/N
 
+def meanAveragePrecision(X_pre, X_gt):
+    sample_num = len(X_pre)
+    class_num = len(X_pre[0])
+    
+    ave_pre = []
+    for index_class in range(class_num):
+        x = []
+        y = []
+        for index_sample in range(sample_num):
+            x.append(X_pre[index_sample][index_class])
+            y.append(X_gt[index_sample][index_class])
+        ave_pre.append(average_precision_score(y_true=y,y_score=x))
+    
+    return np.sum(ave_pre)/class_num
 
 def Recall(X_pre, X_gt):
     N = len(X_pre)
@@ -52,6 +68,9 @@ def get_eval(X_pre, X_gt):
     best_recall = None
     Threshold = None
 
+    mAP = meanAveragePrecision(X_pre, X_gt)
+
+    '''
     for thd in np.arange(0, 1, 0.001):
         X_pre_new = np.array(X_pre > thd, dtype='float64')
         f1 = F1(X_pre_new, X_gt)
@@ -72,8 +91,11 @@ def get_eval(X_pre, X_gt):
     print('best f1:{}'.format(best_f1))
     print('best prec:{}'.format(best_prec))
     print('best recall:{}'.format(best_recall))
+    '''
+    print('mAP:{}'.format(mAP))
     print()
-    return Threshold, best_f1, best_prec, best_recall
+    #return Threshold, best_f1, best_prec, best_recall, mAP
+    return mAP
 
 
 def eval_joint_classification(args):
@@ -97,6 +119,7 @@ def eval_joint_classification(args):
     best_prec = None
     best_recall = None
     bestmodelNum = None
+    best_mAP = None
     for i in range(120):
         filename = 'snap_'+str(i)+'.pth.tar'
         print(filename)
@@ -125,7 +148,13 @@ def eval_joint_classification(args):
 
         total_res = np.concatenate(total_res, axis=0)
         total_label = np.concatenate(total_label, axis=0)
-        thd, f1, prec, recall = get_eval(total_res, total_label)
+        #thd, f1, prec, recall = get_eval(total_res, total_label)
+        mAP = get_eval(total_res, total_label)
+
+        if best_mAP is None or mAP > best_mAP:
+            best_mAP = mAP
+
+        '''
         if best_f1 is None or f1 > best_f1:
             best_f1 = f1
             best_prec = prec
@@ -137,7 +166,8 @@ def eval_joint_classification(args):
     print('best f1:{}'.format(best_f1))
     print('best prec:{}'.format(best_prec))
     print('best recall:{}'.format(best_recall))
-
+    '''
+    print('best mAP:{}'.format(best_mAP))
 
 def eval_split_classification(args):
     valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8,
