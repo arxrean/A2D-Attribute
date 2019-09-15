@@ -62,36 +62,38 @@ def F1(X_pre, X_gt):
 
 
 def get_eval(X_pre, X_gt):
-
-    best_f1 = None
-    best_prec = None
-    best_recall = None
-    Threshold = None
+    #best_f1 = None
+    #best_prec = None
+    #best_recall = None
+    #Threshold = None
+    #best_mAP = None
 
     mAP = meanAveragePrecision(X_pre, X_gt)
 
     '''
     for thd in np.arange(0, 1, 0.001):
         X_pre_new = np.array(X_pre > thd, dtype='float64')
-        f1 = F1(X_pre_new, X_gt)
-        recall = Recall(X_pre_new, X_gt)
-        pre = Precision(X_pre_new, X_gt)
+        #f1 = F1(X_pre_new, X_gt)
+        #recall = Recall(X_pre_new, X_gt)
+        #pre = Precision(X_pre_new, X_gt)
         #print('threshold:{}'.format(thd))
         #print('f1:{}'.format(f1))
         #print()
         # print('prec:{}'.format(pre))
         # print('recall:{}'.format(recall))
 
+        mAP = meanAveragePrecision(X_pre_new, X_gt)
+
         if best_f1 is None or f1 > best_f1:
             best_f1 = f1
             best_prec = pre
             best_recall = recall
             Threshold = thd
-    print('best threshold:{}'.format(Threshold))
-    print('best f1:{}'.format(best_f1))
-    print('best prec:{}'.format(best_prec))
-    print('best recall:{}'.format(best_recall))
-    '''
+        '''
+    #print('best threshold:{}'.format(Threshold))
+    #print('best f1:{}'.format(best_f1))
+    #print('best prec:{}'.format(best_prec))
+    #print('best recall:{}'.format(best_recall))
     print('mAP:{}'.format(mAP))
     print()
     #return Threshold, best_f1, best_prec, best_recall, mAP
@@ -114,10 +116,10 @@ def eval_joint_classification(args):
     if args.cuda:
         model = model.cuda()
 
-    Threshold = None
-    best_f1 =None
-    best_prec = None
-    best_recall = None
+    #Threshold = None
+    #best_f1 =None
+    #best_prec = None
+    #best_recall = None
     bestmodelNum = None
     best_mAP = None
     for i in range(120):
@@ -153,6 +155,7 @@ def eval_joint_classification(args):
 
         if best_mAP is None or mAP > best_mAP:
             best_mAP = mAP
+            bestmodelNum = i
 
         '''
         if best_f1 is None or f1 > best_f1:
@@ -167,6 +170,7 @@ def eval_joint_classification(args):
     print('best prec:{}'.format(best_prec))
     print('best recall:{}'.format(best_recall))
     '''
+    print('best model:{}'.format(bestmodelNum))
     print('best mAP:{}'.format(best_mAP))
 
 def eval_split_classification(args):
