@@ -154,12 +154,6 @@ class ManifoldModel(nn.Module):
         self.valid_action = {1: 0, 2: 1, 3: 2,
                              4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8}
 
-        if self.dset.mode == 'val':
-            pdb.set_trace()
-            val_actors = self.obj_embedder(torch.LongTensor([0, 1, 2, 3, 4, 5, 6]))
-            for i in range(len(val_actors)):
-                pass
-
     def onehot2idx(self, pairs):
         #actors = actors.numpy()
         #actions = actions.numpy()
@@ -222,6 +216,15 @@ class ManifoldModel(nn.Module):
         loss = sum(loss)
         return loss, None
 
+    def infer_forward(self, x):
+        img, pairs, img_path = x[0], x[1], x[2]
+        img_emd = self.image_embedder(
+            img.cuda() if self.args.cuda else img).detach().cpu().numpy()
+        distance_distribution = np.expand_dims(1/np.array(list(
+            map(lambda j: np.linalg.norm(img_emd-j), self.composition_res))), 0)
+
+        return distance_distribution, pairs
+
     def compose(self, actions, actors):
         obj_rep = self.obj_embedder(actors)
         attr_ops = torch.stack([self.action_ops[attr.item()]
@@ -233,6 +236,23 @@ class ManifoldModel(nn.Module):
         out = torch.bmm(actions, actors.unsqueeze(2)).squeeze(2)
         out = F.relu(out)
         return out
+
+    def gen_joint_aa(self):
+        eval_joint_dict = {}
+        val_actors = self.obj_embedder(
+            torch.LongTensor([0, 1, 2, 3, 4, 5, 6]))
+        for i in range(len(val_actors)):
+            for j in range(len(self.valid_action)):
+                joint_aa = int('{}{}'.format(i+1, j+1))
+                if joint_aa in self.valid:
+                    eval_joint_dict[self.valid[joint_aa]] = torch.bmm(torch.stack(
+                        [self.action_ops[j]]), val_actors[i:i+1].unsqueeze(2)).squeeze()
+
+        list_res = []
+        for i in range(43):
+            list_res.append(eval_joint_dict[i].detach().cpu().numpy())
+
+        self.composition_res = np.stack(list_res)
 
 
 def getJointClassifier(args):

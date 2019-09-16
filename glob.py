@@ -28,6 +28,7 @@ def p_parse():
 	parser.add_argument("--save_root", default='./save/', type=str)
 	# feature
 	parser.add_argument("--feature_path",default='./repo/joint_img_feature.npy')
+	parser.add_argument("--val_feature_path",default='./repo/joint_val_img_feature.npy')
 
 	args = parser.parse_args()
 

@@ -18,6 +18,7 @@ from keras.utils import to_categorical
 
 from sklearn.metrics import average_precision_score
 
+
 def Precision(X_pre, X_gt):
     N = len(X_pre)
     p = 0.0
@@ -27,10 +28,11 @@ def Precision(X_pre, X_gt):
         p += np.sum(x*y)/(np.sum(x) + 1e-8)
     return p/N
 
+
 def meanAveragePrecision(X_pre, X_gt):
     sample_num = len(X_pre)
     class_num = len(X_pre[0])
-    
+
     ave_pre = []
     for index_class in range(class_num):
         x = []
@@ -38,9 +40,10 @@ def meanAveragePrecision(X_pre, X_gt):
         for index_sample in range(sample_num):
             x.append(X_pre[index_sample][index_class])
             y.append(X_gt[index_sample][index_class])
-        ave_pre.append(average_precision_score(y_true=y,y_score=x))
-    
+        ave_pre.append(average_precision_score(y_true=y, y_score=x))
+
     return np.sum(ave_pre)/class_num
+
 
 def Recall(X_pre, X_gt):
     N = len(X_pre)
@@ -63,12 +66,6 @@ def F1(X_pre, X_gt):
 
 
 def get_eval(X_pre, X_gt):
-    #best_f1 = None
-    #best_prec = None
-    #best_recall = None
-    #Threshold = None
-    #best_mAP = None
-
     mAP = meanAveragePrecision(X_pre, X_gt)
     print('mAP:{}'.format(mAP))
     return mAP
@@ -128,6 +125,7 @@ def eval_joint_classification(args):
             bestmodelNum = i
 
     print('best mAP:{}'.format(best_mAP))
+
 
 def eval_split_classification(args):
     valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8,
@@ -254,7 +252,7 @@ def eval_actor_or_action_classification(args):
     get_eval(total_res, total_label)
 
 
-def eval_composition_1(args):
+def eval_composition_1(args, model_path='composition_train/snap/snap_89.pth.tar'):
     val_transform = transforms.Compose([
         transforms.Resize((args.input_size+32, args.input_size+32)),
         transforms.CenterCrop((args.input_size, args.input_size)),
@@ -269,12 +267,21 @@ def eval_composition_1(args):
 
     model = ManifoldModel(dset=val_dataset, args=args)
     model.load_state_dict(torch.load(os.path.join(
-        args.save_root, 'composition_train/snap/snap_89.pth.tar'), map_location='cpu')['state_dict'])
+        args.save_root, model_path), map_location='cpu')['state_dict'])
+    model.gen_joint_aa()
     if args.cuda:
         model.cuda()
 
-    for _, pack in enumerate(train_loader):
-        pass
+    res = []
+    label = []
+    for _, pack in enumerate(val_loader):
+        res_i, label_i = model.infer_forward(pack)
+        res.append(res_i)
+        label.append(label_i)
+
+    res = np.concatenate(res, axis=0)
+    label = np.concatenate(label, axis=0)
+    get_eval(res,label)
 
 
 if __name__ == '__main__':

@@ -50,7 +50,8 @@ class A2DComposition(tdata.Dataset):
                         candidates.append(action[actor.index(a)])
             self.train_actor_affordance[_actor] = list(set(candidates))
 
-        feat_file = args.feature_path  # pre-joint features path
+        # pre-joint features path
+        feat_file = args.feature_path if self.mode == 'train' else args.val_feature_path
         activation_data = np.load(feat_file, allow_pickle=True).tolist()
         # activation_data = torch.load(feat_file) # [features,names] features=>(N,d)
         self.activations = dict(
@@ -188,6 +189,7 @@ class A2DComposition(tdata.Dataset):
         img_path, t_img_path, actors, actions = self.data[index]
 
         if self.args.t == 0:
+            # pdb.set_trace()
             img = self.transform(Image.open(img_path).convert('RGB'))
             data = [img, self.idx2hot([self.pair2idx['{} {}'.format(
                 actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]
