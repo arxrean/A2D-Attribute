@@ -10,7 +10,8 @@ from torch import Tensor
 import numpy as np
 
 from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
-from model.net import getJointClassifier, getSplitClassifier
+from loader.A2DCompositionLoader import A2DComposition
+from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
 from glob import p_parse
 
 from keras.utils import to_categorical
@@ -69,34 +70,7 @@ def get_eval(X_pre, X_gt):
     #best_mAP = None
 
     mAP = meanAveragePrecision(X_pre, X_gt)
-
-    '''
-    for thd in np.arange(0, 1, 0.001):
-        X_pre_new = np.array(X_pre > thd, dtype='float64')
-        #f1 = F1(X_pre_new, X_gt)
-        #recall = Recall(X_pre_new, X_gt)
-        #pre = Precision(X_pre_new, X_gt)
-        #print('threshold:{}'.format(thd))
-        #print('f1:{}'.format(f1))
-        #print()
-        # print('prec:{}'.format(pre))
-        # print('recall:{}'.format(recall))
-
-        mAP = meanAveragePrecision(X_pre_new, X_gt)
-
-        if best_f1 is None or f1 > best_f1:
-            best_f1 = f1
-            best_prec = pre
-            best_recall = recall
-            Threshold = thd
-        '''
-    #print('best threshold:{}'.format(Threshold))
-    #print('best f1:{}'.format(best_f1))
-    #print('best prec:{}'.format(best_prec))
-    #print('best recall:{}'.format(best_recall))
     print('mAP:{}'.format(mAP))
-    print()
-    #return Threshold, best_f1, best_prec, best_recall, mAP
     return mAP
 
 
@@ -116,10 +90,6 @@ def eval_joint_classification(args):
     if args.cuda:
         model = model.cuda()
 
-    #Threshold = None
-    #best_f1 =None
-    #best_prec = None
-    #best_recall = None
     bestmodelNum = None
     best_mAP = None
     for i in range(120):
@@ -131,7 +101,7 @@ def eval_joint_classification(args):
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, 'joint_classification/snap_25.pth.tar'), map_location='cpu')['state_dict'])
         '''
-        
+
         total_res = []
         total_label = []
         with torch.no_grad():
@@ -157,20 +127,6 @@ def eval_joint_classification(args):
             best_mAP = mAP
             bestmodelNum = i
 
-        '''
-        if best_f1 is None or f1 > best_f1:
-            best_f1 = f1
-            best_prec = prec
-            best_recall = recall
-            Threshold = thd
-            bestmodelNum = i
-    print('best model:{}'.format(bestmodelNum))
-    print('best threshold:{}'.format(Threshold))
-    print('best f1:{}'.format(best_f1))
-    print('best prec:{}'.format(best_prec))
-    print('best recall:{}'.format(best_recall))
-    '''
-    print('best model:{}'.format(bestmodelNum))
     print('best mAP:{}'.format(best_mAP))
 
 def eval_split_classification(args):
@@ -190,7 +146,7 @@ def eval_split_classification(args):
 
     val_dataset = A2DClassificationWithActorAction(
         args, val_transform, mode='val')
-    val_loader = DataLoader(val_dataset, batch_size=8, num_workers=0,
+    val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
     model = getSplitClassifier(args)
@@ -298,8 +254,33 @@ def eval_actor_or_action_classification(args):
     get_eval(total_res, total_label)
 
 
+def eval_composition_1(args):
+    val_transform = transforms.Compose([
+        transforms.Resize((args.input_size+32, args.input_size+32)),
+        transforms.CenterCrop((args.input_size, args.input_size)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.4569, 0.4335, 0.3892],
+                             [0.2093, 0.2065, 0.2046])
+    ])
+
+    val_dataset = A2DComposition(args, val_transform, mode='val')
+    val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
+                            pin_memory=True, drop_last=False, shuffle=False)
+
+    model = ManifoldModel(dset=val_dataset, args=args)
+    model.load_state_dict(torch.load(os.path.join(
+        args.save_root, 'composition_train/snap/snap_89.pth.tar'), map_location='cpu')['state_dict'])
+    if args.cuda:
+        model.cuda()
+
+    for _, pack in enumerate(train_loader):
+        pass
+
+
 if __name__ == '__main__':
     args = p_parse()
-    eval_joint_classification(args)
+    # eval_joint_classification(args)
     # eval_split_classification(args)
     # eval_actor_or_action_classification(args)
+
+    eval_composition_1(args)

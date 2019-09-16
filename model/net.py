@@ -151,8 +151,15 @@ class ManifoldModel(nn.Module):
                       67: 33, 68: 34, 69: 35, 72: 36, 73: 37, 75: 38, 76: 39, 77: 40,
                       78: 41, 79: 42}
         self.valid_actor = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6}
-        self.valid_action = {1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8}
-        
+        self.valid_action = {1: 0, 2: 1, 3: 2,
+                             4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8}
+
+        if self.dset.mode == 'val':
+            pdb.set_trace()
+            val_actors = self.obj_embedder(torch.LongTensor([0, 1, 2, 3, 4, 5, 6]))
+            for i in range(len(val_actors)):
+                pass
+
     def onehot2idx(self, pairs):
         #actors = actors.numpy()
         #actions = actions.numpy()
@@ -161,49 +168,51 @@ class ManifoldModel(nn.Module):
         actions_idx = []
 
         for pair in pairs.numpy():
-            pairindexs = np.where(pair==1)[0]
+            pairindexs = np.where(pair == 1)[0]
             actor_idx = []
             action_idx = []
             for pairindex in pairindexs:
-                pairlabel = list(self.valid.keys())[list(self.valid.values()).index(pairindex)]
+                pairlabel = list(self.valid.keys())[list(
+                    self.valid.values()).index(pairindex)]
                 actor_idx.append(self.valid_actor[pairlabel // 10])
                 action_idx.append(self.valid_action[pairlabel % 10])
-            actors_idx.append(torch.Tensor(actor_idx))
-            actions_idx.append(torch.Tensor(action_idx))
+            actors_idx.append(torch.Tensor(actor_idx).type(torch.LongTensor).cuda(
+            ) if self.args.cuda else torch.Tensor(actor_idx).type(torch.LongTensor))
+            actions_idx.append(torch.Tensor(action_idx).type(torch.LongTensor).cuda(
+            ) if self.args.cuda else torch.Tensor(action_idx).type(torch.LongTensor))
         return actors_idx, actions_idx
 
     def train_forward(self, x):
-        img, pairs, neg_action, neg_actor = x[0], x[1], x[-2], x[-1]
+        img, pairs, neg_action, neg_actor, img_path = x[0], x[1], x[2], x[3], x[4]
 
         actors, actions = self.onehot2idx(pairs)
 
-        neg_actor = [torch.Tensor([i]) for i in np.where(neg_actor.numpy()==1)[1]]
-        neg_action = [torch.Tensor([i]) for i in np.where(neg_action.numpy()==1)[1]]
+        neg_actor = list(map(lambda i: torch.Tensor(
+            [i]).type(torch.LongTensor).cuda() if self.args.cuda else torch.Tensor([i]).type(torch.LongTensor), np.where(neg_actor.numpy() == 1)[1]))
 
-        '''
-        actors = [torch.where(actor == 1)[0].cuda() if self.args.cuda else torch.where(
-            actor == 1)[0] for actor in actors]
-        actions = [torch.where(action == 1)[0] for action in actions]
-        neg_actor = [torch.where(actor == 1)[0].cuda() if self.args.cuda else torch.where(
-            actor == 1)[0] for actor in neg_actor]
-        neg_action = [torch.where(action == 1)[0] for action in neg_action]
-        '''
+        neg_action = list(map(lambda i: torch.Tensor(
+            [i]).type(torch.LongTensor).cuda() if self.args.cuda else torch.Tensor([i]).type(torch.LongTensor), np.where(neg_action.numpy() == 1)[1]))
 
-        loss=[]
+        loss = []
         # pdb.set_trace()
 
         feature = self.image_embedder(img.cuda() if self.args.cuda else img)
 
         # positive
-        #512,300 512,300,300
-        actor_emb = [self.obj_embedder(actor) for actor in actors]
-        pos_actions = [[self.action_ops[idx] for idx in action] for action in actions]
-        
-        positive = self.apply_ops(pos_actions, actor_emb)
+        actor_emb = list(map(lambda x: self.obj_embedder(x), actors))
+        pos_actions = list(map(lambda action: torch.stack(
+            list(map(lambda idx: self.action_ops[idx], action))), actions))
+
+        pos_pairs = list(zip(actor_emb, pos_actions))
+
+        positive = torch.stack(list(map(lambda pair: torch.mean(self.apply_ops(
+            pair[1], pair[0]), dim=0, keepdim=True), pos_pairs)), dim=0).squeeze()
 
         # negative
-        neg_actor_emb = [self.obj_embedder(actor) for actor in neg_actor]
-        neg_actions = [[self.action_ops[action.item()]] for action in neg_action]
+        neg_actor_emb = torch.stack(
+            list(map(lambda actor: self.obj_embedder(actor), neg_actor))).squeeze()
+        neg_actions = torch.stack(
+            list(map(lambda action: self.action_ops[action.item()], neg_action)))
         negative = self.apply_ops(neg_actions, neg_actor_emb)
 
         loss_triplet = F.triplet_margin_loss(

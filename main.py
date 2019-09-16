@@ -15,7 +15,7 @@ from loader.A2DCompositionLoader import A2DComposition
 from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
 from utils.opt import get_finetune_optimizer, get_op_optimizer
 from utils.helper import get_pos_weight, bce_weight_loss
-from Glob.glob import p_parse
+from glob import p_parse
 
 
 def joint_classification(args):
@@ -59,7 +59,7 @@ def joint_classification(args):
 
 		train_loss.append(0)
 		val_loss.append(0)
-		for iter, pack in enumerate(train_loader):
+		for _, pack in enumerate(train_loader):
 			imgs = pack[1]  # (N,t,c,m,n)
 			labels = pack[2]  # (N,t,c,m,n)
 
@@ -67,7 +67,7 @@ def joint_classification(args):
 				imgs = imgs.cuda()
 				labels = labels.cuda()
 
-			out, fc = model(imgs)
+			out, _ = model(imgs)
 			loss = criterion.get_loss(out, labels)
 			opt.zero_grad()
 			loss.backward()
@@ -76,7 +76,7 @@ def joint_classification(args):
 			train_loss[-1] += loss.item()
 
 		with torch.no_grad():
-			for iter, pack in enumerate(val_loader):
+			for _, pack in enumerate(val_loader):
 				imgs = pack[1]  # (N,t,c,m,n)
 				labels = pack[2]  # (N,t,c,m,n)
 
@@ -84,7 +84,7 @@ def joint_classification(args):
 					imgs = imgs.cuda()
 					labels = labels.cuda()
 
-				out, fc = model(imgs)
+				out, _ = model(imgs)
 				loss = criterion.get_loss(out, labels, nouse=True)
 
 				val_loss[-1] += loss.item()
@@ -150,7 +150,7 @@ def split_classification(args):
 		plt.figure()
 		train_loss.append(0)
 		val_top1_acc.append([])
-		for iter, pack in enumerate(train_loader):
+		for _, pack in enumerate(train_loader):
 			imgs = pack[0]  # (N,t,c,m,n)
 			actor_labels = pack[2]
 			action_labels = pack[3]
@@ -171,7 +171,7 @@ def split_classification(args):
 			train_loss[-1] += actor_loss.item()+action_loss.item()
 
 		with torch.no_grad():
-			for iter, pack in enumerate(val_loader):
+			for _, pack in enumerate(val_loader):
 				imgs = pack[0]  # (N,t,c,m,n)
 				actor_labels = pack[2]
 				action_labels = pack[3]
@@ -225,11 +225,11 @@ def composition_train(args):
 	])
 
 	train_dataset = A2DComposition(args, train_transform, mode='train')
-	val_dataset = A2DComposition(args, train_transform, mode='train')
+	val_dataset = A2DComposition(args, train_transform, mode='val')
 
-	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
+	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0,
 							  pin_memory=True, drop_last=True, shuffle=True)
-	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
+	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
 							pin_memory=True, drop_last=False, shuffle=False)
 
 	model = ManifoldModel(dset=train_dataset, args=args)
@@ -246,7 +246,7 @@ def composition_train(args):
 
 		plt.figure()
 		train_loss.append(0)
-		for iter, pack in enumerate(train_loader):
+		for _, pack in enumerate(train_loader):
 			loss, _ = model.train_forward(pack)
 
 			opt.zero_grad()

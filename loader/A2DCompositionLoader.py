@@ -16,6 +16,8 @@ class A2DComposition(tdata.Dataset):
         self.mode = mode
         self.csv = pd.read_csv(args.csv_path)
 
+        # pdb.set_trace()
+
         self.actors_dict = {1: 'adult', 2: 'baby',
                             3: 'ball', 4: 'bird', 5: 'car', 6: 'cat', 7: 'dog'}
         self.actions_dict = {1: 'climbing', 2: 'crawling', 3: 'eating', 4: 'flying',
@@ -32,13 +34,20 @@ class A2DComposition(tdata.Dataset):
 
         self.actor_affordance = {}
         self.train_actor_affordance = {}
+
         for _actor in self.actors:
-            candidates = [action for (
-                _, _, action, actor) in self.train_data+self.test_data if actor == _actor]
+            candidates = []
+            for _, _, actor, action in self.train_data+self.test_data:
+                for a in actor:
+                    if a == _actor:
+                        candidates.append(action[actor.index(a)])
             self.actor_affordance[_actor] = list(set(candidates))
 
-            candidates = [actor for (_, _, action, actor)
-                          in self.train_data if actor == _actor]
+            candidates = []
+            for _, _, actor, action in self.train_data+self.test_data:
+                for a in actor:
+                    if a == _actor:
+                        candidates.append(action[actor.index(a)])
             self.train_actor_affordance[_actor] = list(set(candidates))
 
         feat_file = args.feature_path  # pre-joint features path
@@ -80,7 +89,7 @@ class A2DComposition(tdata.Dataset):
         indexPair = []
         indexActors = []
         indexActions = []
-        
+
         for item in labels:
             label_list = item.split(' ')
             for label in label_list:
@@ -89,12 +98,11 @@ class A2DComposition(tdata.Dataset):
                 indexPair.append(label)
                 indexActors.append(label // 10)
                 indexActions.append(label % 10)
-        
+
         indexActors = sorted(np.unique(indexActors).tolist())
         indexActions = sorted(np.unique(indexActions).tolist())
         indexPair = sorted(np.unique(indexPair).tolist())
 
-# <<<<<<< Updated upstream
         return indexActors, indexActions, indexPair
 
     def indexactor2string(self, indexlabel):
@@ -102,29 +110,19 @@ class A2DComposition(tdata.Dataset):
         for item in indexlabel:
             strlabel.append(self.actors_dict[item])
         return strlabel
-        
+
     def indexaction2string(self, indexlabel):
         strlabel = []
         for item in indexlabel:
             strlabel.append(self.actions_dict[item])
         return strlabel
-        
+
     def indexpair2string(self, indexlabel):
         strlabel = []
         for item in indexlabel:
-            strlabel.append(self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10])
+            strlabel.append(
+                self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10])
         return strlabel
-# =======
-#         for item in indexActors:
-#             actors.append(self.actors_dict[item])
-#         for item in indexActions:
-#             actions.append(self.actions_dict[item])
-#         for item in indexPair:
-#             pairs.append(self.actors_dict[item // 10] +
-#                          ' ' + self.actions_dict[item % 10])
-
-#         return actors, actions, pairs
-# >>>>>>> Stashed changes
 
     def get_split_info(self):
         # [img_path, [t img_path], [actor], [action]]
@@ -191,7 +189,8 @@ class A2DComposition(tdata.Dataset):
 
         if self.args.t == 0:
             img = self.transform(Image.open(img_path).convert('RGB'))
-            data = [img, self.idx2hot([self.pair2idx['{} {}'.format(actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]
+            data = [img, self.idx2hot([self.pair2idx['{} {}'.format(
+                actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]
             if self.mode == 'train':
                 neg_action, neg_actor = self.sample_negative(actions, actors)
                 data += [self.idx2hot([neg_action], class_num=len(self.actions)),
@@ -202,6 +201,7 @@ class A2DComposition(tdata.Dataset):
                 data[0] = torch.from_numpy(
                     self.activations[img_path[img_path.index('pngs320H'):]])
 
+            data.append(img_path)
             return data
 
     def __len__(self):
