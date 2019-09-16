@@ -4,3 +4,5 @@
 **sftp*
 **/save
 **joint_img_feature.npy
+repo/joint_train_img_feature.npy
+repo/joint_val_img_feature.npy
