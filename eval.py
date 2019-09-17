@@ -281,7 +281,7 @@ def eval_composition_1(args, model_path='composition_train/snap/snap_89.pth.tar'
 
     res = np.concatenate(res, axis=0)
     label = np.concatenate(label, axis=0)
-    get_eval(res,label)
+    get_eval(res, label)
 
 
 if __name__ == '__main__':

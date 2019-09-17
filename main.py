@@ -216,21 +216,10 @@ def composition_train(args):
 							 [0.2093, 0.2065, 0.2046])
 	])
 
-	val_transform = transforms.Compose([
-		transforms.Resize((args.input_size+32, args.input_size+32)),
-		transforms.CenterCrop((args.input_size, args.input_size)),
-		transforms.ToTensor(),
-		transforms.Normalize([0.4569, 0.4335, 0.3892],
-							 [0.2093, 0.2065, 0.2046])
-	])
-
 	train_dataset = A2DComposition(args, train_transform, mode='train')
-	val_dataset = A2DComposition(args, train_transform, mode='val')
 
 	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0,
 							  pin_memory=True, drop_last=True, shuffle=True)
-	val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
-							pin_memory=True, drop_last=False, shuffle=False)
 
 	model = ManifoldModel(dset=train_dataset, args=args)
 	if args.cuda:

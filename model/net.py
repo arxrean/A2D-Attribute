@@ -119,7 +119,7 @@ class ManifoldModel(nn.Module):
         super(ManifoldModel, self).__init__()
         self.args = args
         self.dset = dset
-        self.margin = 0.5
+        self.margin = args.triplet_margin
 
         # precompute validation pairs
         actors, actions = list(map(lambda x: x.split(' ')[0], self.dset.pairs)), list(
@@ -155,9 +155,6 @@ class ManifoldModel(nn.Module):
                              4: 3, 5: 4, 6: 5, 7: 6, 8: 7, 9: 8}
 
     def onehot2idx(self, pairs):
-        #actors = actors.numpy()
-        #actions = actions.numpy()
-        #pairs = pairs.numpy()
         actors_idx = []
         actions_idx = []
 

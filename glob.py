@@ -24,6 +24,7 @@ def p_parse():
 	parser.add_argument("--lr_dec", default=1, type=float)
 	parser.add_argument("--wt_dec", default=5e-4, type=float)
 	parser.add_argument("--op_img_dim", default=300, type=int)
+	parser.add_argument("--triplet_margin", default=0.5, type=float)
 	# save
 	parser.add_argument("--save_root", default='./save/', type=str)
 	# feature
