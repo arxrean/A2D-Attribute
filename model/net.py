@@ -174,15 +174,13 @@ class ManifoldModel(nn.Module):
         return actors_idx, actions_idx
 
     def train_forward(self, x):
-        img, pairs, neg_action, neg_actor, img_path = x[0], x[1], x[2], x[3], x[4]
+        #img, pairs, neg_action, neg_actor, img_path = x[0], x[1], x[2], x[3], x[4]
+
+        img, pairs, neg_pairs, img_path = x[0], x[1], x[2], x[3]
 
         actors, actions = self.onehot2idx(pairs)
 
-        neg_actor = list(map(lambda i: torch.Tensor(
-            [i]).type(torch.LongTensor).cuda() if self.args.cuda else torch.Tensor([i]).type(torch.LongTensor), np.where(neg_actor.numpy() == 1)[1]))
-
-        neg_action = list(map(lambda i: torch.Tensor(
-            [i]).type(torch.LongTensor).cuda() if self.args.cuda else torch.Tensor([i]).type(torch.LongTensor), np.where(neg_action.numpy() == 1)[1]))
+        neg_actors, neg_actions = self.onehot2idx(neg_pairs)
 
         loss = []
         # pdb.set_trace()
@@ -200,11 +198,15 @@ class ManifoldModel(nn.Module):
             pair[1], pair[0]), dim=0, keepdim=True), pos_pairs)), dim=0).squeeze()
 
         # negative
-        neg_actor_emb = torch.stack(
-            list(map(lambda actor: self.obj_embedder(actor), neg_actor))).squeeze()
-        neg_actions = torch.stack(
-            list(map(lambda action: self.action_ops[action.item()], neg_action)))
-        negative = self.apply_ops(neg_actions, neg_actor_emb)
+        neg_actor_emb = list(map(lambda neg_actor: self.obj_embedder(neg_actor), neg_actors))
+        neg_actions = list(map(lambda neg_action: torch.stack(
+            list(map(lambda idx: self.action_ops[idx], neg_action))), neg_actions))
+
+        neg_pairs = list(zip(neg_actor_emb, neg_actions))
+
+        negative = torch.stack(list(map(lambda pair: torch.mean(self.apply_ops(
+            pair[1], pair[0]), dim=0, keepdim=True), neg_pairs)), dim=0).squeeze()
+
 
         loss_triplet = F.triplet_margin_loss(
             feature, positive, negative, margin=self.margin)
