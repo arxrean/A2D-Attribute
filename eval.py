@@ -18,6 +18,7 @@ from keras.utils import to_categorical
 
 from sklearn.metrics import average_precision_score
 
+import matplotlib.pyplot as plt
 
 def Precision(X_pre, X_gt):
     N = len(X_pre)
@@ -71,7 +72,7 @@ def get_eval(X_pre, X_gt):
     return mAP
 
 
-def eval_joint_classification(args):
+def eval_joint_classification(args, model_path='joint_classification/snap/'):
     val_transform = transforms.Compose([
         transforms.Resize((args.input_size, args.input_size)),
         transforms.ToTensor(),
@@ -83,17 +84,24 @@ def eval_joint_classification(args):
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
+    '''
     model = getJointClassifier(args)
     if args.cuda:
         model = model.cuda()
+    '''
 
+    snapList = os.listdir(os.path.join(args.save_root, model_path))
+    mapList = np.zeros(len(snapList)).tolist()
     bestmodelNum = None
     best_mAP = None
-    for i in range(120):
-        filename = 'snap_'+str(i)+'.pth.tar'
-        print(filename)
+
+    for snap in snapList:
+        print(snap)
+        model = getJointClassifier(args)
+        if args.cuda:
+            model = model.cuda()
         model.load_state_dict(torch.load(os.path.join(
-            args.save_root, 'joint_classification/new_snap/', filename), map_location='cpu')['state_dict'])
+            args.save_root, model_path, snap), map_location='cpu')['state_dict'])
         '''
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, 'joint_classification/snap_25.pth.tar'), map_location='cpu')['state_dict'])
@@ -119,13 +127,20 @@ def eval_joint_classification(args):
         total_label = np.concatenate(total_label, axis=0)
         #thd, f1, prec, recall = get_eval(total_res, total_label)
         mAP = get_eval(total_res, total_label)
-
+        mapList[int(snap.split('.')[0].split('_')[1])] = mAP
         if best_mAP is None or mAP > best_mAP:
             best_mAP = mAP
-            bestmodelNum = i
-
+            bestmodelNum = int(snap.split('.')[0].split('_')[1])
+        print()
     print('best mAP:{}'.format(best_mAP))
-
+    print('best model:{}'.format('snap_'+str(bestmodelNum)))
+    plt.figure()
+    plt.plot(range(len(mapList)), mapList, label='joint_model mAP')
+    plt.legend()
+    if not os.path.exists('./save/joint_classification/imgs'):
+        os.makedirs('./save/joint_classification/imgs')
+    plt.savefig('./save/joint_classification/imgs/snaps_eval_mAP.png')
+    plt.close()
 
 def eval_split_classification(args):
     valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8,
@@ -252,7 +267,7 @@ def eval_actor_or_action_classification(args):
     get_eval(total_res, total_label)
 
 
-def eval_composition_1(args, model_path='composition_train/snap/snap_89.pth.tar'):
+def eval_composition_1(args, model_path='composition_train/snap/'):
     val_transform = transforms.Compose([
         transforms.Resize((args.input_size+32, args.input_size+32)),
         transforms.CenterCrop((args.input_size, args.input_size)),
@@ -265,23 +280,46 @@ def eval_composition_1(args, model_path='composition_train/snap/snap_89.pth.tar'
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
-    model = ManifoldModel(dset=val_dataset, args=args)
-    model.load_state_dict(torch.load(os.path.join(
-        args.save_root, model_path), map_location='cpu')['state_dict'])
-    model.gen_joint_aa()
-    if args.cuda:
-        model.cuda()
+    #model = ManifoldModel(dset=val_dataset, args=args)
 
-    res = []
-    label = []
-    for _, pack in enumerate(val_loader):
-        res_i, label_i = model.infer_forward(pack)
-        res.append(res_i)
-        label.append(label_i)
+    snapList = os.listdir(os.path.join(args.save_root, model_path))
+    mapList = np.zeros(len(snapList)).tolist()
+    bestmodelNum = None
+    best_mAP = None
+    for snap in snapList:
+        print(snap)
+        model = ManifoldModel(dset=val_dataset, args=args)
+        model.load_state_dict(torch.load(os.path.join(
+            args.save_root, model_path, snap), map_location='cpu')['state_dict'])
+        model.gen_joint_aa()
+        
+        if args.cuda:
+            model.cuda()
+        
+        res = []
+        label = []
+        for _, pack in enumerate(val_loader):
+            res_i, label_i = model.infer_forward(pack)
+            res.append(res_i)
+            label.append(label_i)
 
-    res = np.concatenate(res, axis=0)
-    label = np.concatenate(label, axis=0)
-    get_eval(res, label)
+        res = np.concatenate(res, axis=0)
+        label = np.concatenate(label, axis=0)
+        mAP = get_eval(res, label)
+        mapList[int(snap.split('.')[0].split('_')[1])] = mAP
+        if best_mAP is None or mAP > best_mAP:
+            best_mAP = mAP
+            bestmodelNum = int(snap.split('.')[0].split('_')[1])
+        print()
+    print('best mAP:{}'.format(best_mAP))
+    print('best model:{}'.format('snap_'+str(bestmodelNum)))
+    plt.figure()
+    plt.plot(range(len(mapList)), mapList, label='composition mAP')
+    plt.legend()
+    if not os.path.exists('./save/composition_train/imgs'):
+        os.makedirs('./save/composition_train/imgs')
+    plt.savefig('./save/composition_train/imgs/snaps_eval_mAP.png')
+    plt.close()
 
 
 if __name__ == '__main__':
