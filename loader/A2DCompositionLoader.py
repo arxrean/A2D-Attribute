@@ -189,8 +189,12 @@ class A2DComposition(tdata.Dataset):
 
     def sample_negative(self, actions, actors):
         sample_num = np.random.choice(self.maxlenlabel, p=self.train_label_len_probability) + 1
-        choice_index_list = np.random.choice(len(self.train_pairs), sample_num)
-        
+
+        while(True):
+            choice_index_list = np.random.choice(len(self.train_pairs), sample_num)
+            if len(choice_index_list) == len(set(choice_index_list)):
+                break
+
         samples = []
         pos_pairs = []
         
