@@ -208,22 +208,16 @@ def split_classification(args):
 
 
 def composition_train(args):
-	train_transform = transforms.Compose([
-		transforms.RandomResizedCrop((args.input_size, args.input_size)),
-		transforms.RandomHorizontalFlip(),
-		transforms.ToTensor(),
-		transforms.Normalize([0.4569, 0.4335, 0.3892],
-							 [0.2093, 0.2065, 0.2046])
-	])
+	train_dataset = A2DComposition(args, None, mode='train')
 
-	train_dataset = A2DComposition(args, train_transform, mode='train')
-
-	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0,
+	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
 							  pin_memory=True, drop_last=True, shuffle=True)
 
 	model = ManifoldModel(dset=train_dataset, args=args)
 	if args.cuda:
 		model.cuda()
+
+	opt = get_op_optimizer(args, model)
 
 	if os.path.exists('./save/composition_train/snap/'):
 		shutil.rmtree('./save/composition_train/snap/')
@@ -231,8 +225,6 @@ def composition_train(args):
 
 	train_loss = []
 	for epoch in range(args.max_epoches):
-		opt = get_op_optimizer(args, model, epoch)
-
 		plt.figure()
 		train_loss.append(0)
 		for _, pack in enumerate(train_loader):

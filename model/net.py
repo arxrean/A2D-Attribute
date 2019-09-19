@@ -52,8 +52,6 @@ class JointClassifier(nn.Module):
 
     def gen_feature(self, x):
         last_conv = self.backbone(x)
-        last_conv.requires_grad_()
-        last_conv.retain_grad()
 
         fc = self.adapool(last_conv).squeeze()
 
@@ -198,6 +196,7 @@ class ManifoldModel(nn.Module):
             pair[1], pair[0]), dim=0, keepdim=True), pos_pairs)), dim=0).squeeze()
 
         # negative
+        # pdb.set_trace()
         neg_actor_emb = list(map(lambda neg_actor: self.obj_embedder(neg_actor), neg_actors))
         neg_actions = list(map(lambda neg_action: torch.stack(
             list(map(lambda idx: self.action_ops[idx], neg_action))), neg_actions))
@@ -220,7 +219,7 @@ class ManifoldModel(nn.Module):
         img_emd = self.image_embedder(
             img.cuda() if self.args.cuda else img).detach().cpu().numpy()
         distance_distribution = np.expand_dims(1/np.array(list(
-            map(lambda j: np.linalg.norm(img_emd-j), self.composition_res))), 0)
+            map(lambda j: np.linalg.norm(img_emd-j), self.composition_res))), 0)    
 
         return distance_distribution, pairs
 

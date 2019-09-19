@@ -52,13 +52,16 @@ class A2DComposition(tdata.Dataset):
                         candidates.append(action[actor.index(a)])
             self.train_actor_affordance[_actor] = list(set(candidates))
 
-        # pre-joint features path
-        feat_file = args.feature_path if self.mode == 'train' else args.val_feature_path
-        activation_data = np.load(feat_file, allow_pickle=True).tolist()
-        # activation_data = torch.load(feat_file) # [features,names] features=>(N,d)
-        self.activations = dict(
-            zip(activation_data['id'], activation_data['res']))
-        self.feat_dim = len(activation_data['res'][0])  # d
+        if self.args.use_feat:
+            # pre-joint features path
+            feat_file = args.feature_path
+            activation_data = np.load(feat_file, allow_pickle=True).tolist()
+            # activation_data = torch.load(feat_file) # [features,names] features=>(N,d)
+            self.activations = dict(
+                zip(activation_data['id'], activation_data['res']))
+            self.feat_dim = len(activation_data['res'][0])  # d
+        else:
+            self.activations = None
 
     def parse_split(self):
         tr_actions = []
@@ -197,7 +200,7 @@ class A2DComposition(tdata.Dataset):
         ##################
 
         return train_data, test_data
-    
+
     def train_sample_probability(self):
         tr_labels = self.csv[self.csv['usage'] == 0]['label'].values
         train_sample_num = len(tr_labels)
@@ -205,11 +208,12 @@ class A2DComposition(tdata.Dataset):
         for label in tr_labels:
             if len(label.split(' ')) > maxlenlabel:
                 maxlenlabel = len(label.split(' '))
-        
+
         train_label_len_probability = np.zeros(maxlenlabel)
         for label in tr_labels:
             train_label_len_probability[len(label.split(' ')) - 1] += 1
-        train_label_len_probability = (np.array(train_label_len_probability) / train_sample_num).tolist()
+        train_label_len_probability = (
+            np.array(train_label_len_probability) / train_sample_num).tolist()
 
         return maxlenlabel, train_label_len_probability
 
@@ -221,15 +225,6 @@ class A2DComposition(tdata.Dataset):
             if len(choice_index_list) == len(set(choice_index_list)):
                 break
 
-        #samples = []
-        #pos_pairs = []
-        '''
-        for i in range(len(actors)):
-            pos_pairs.append(actors[i] + ' ' + actions[i])
-
-        for index in choice_index_list:
-            samples.append(self.train_pairs[index])
-        '''
         pos_pairs = list(map(lambda actor,action: actor+' '+action, actors, actions))
         samples = list(map(lambda index: self.train_pairs[index], choice_index_list))
 
@@ -237,15 +232,6 @@ class A2DComposition(tdata.Dataset):
             return self.sample_negative(actions, actors)
         else:
             return [self.pair2idx[sample] for sample in samples]
-
-        '''
-        sample = self.train_pairs[np.random.choice(
-            len(self.train_pairs))]
-        new_actor, new_action = sample.split(' ')[0], sample.split(' ')[1]
-        if new_action in actions and new_actor in actors:
-            return self.sample_negative(actions, actors)
-        return self.action2idx[new_action], self.actor2idx[new_actor]
-        '''
 
     def idx2hot(self, idx_list, class_num):
         label = to_categorical(idx_list, num_classes=class_num)
@@ -256,24 +242,18 @@ class A2DComposition(tdata.Dataset):
 
     def __getitem__(self, index):
         img_path, t_img_path, actors, actions = self.data[index]
+        # pdb.set_trace()
 
         if self.args.t == 0:
             # pdb.set_trace()
-            img = self.transform(Image.open(img_path).convert('RGB'))
+            img = self.transform(Image.open(img_path).convert('RGB')) if self.activations is None else torch.from_numpy(
+                self.activations[img_path[img_path.index('pngs320H'):]])
+
             data = [img, self.idx2hot([self.pair2idx['{} {}'.format(
                 actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]
             if self.mode == 'train':
                 neg_pairs = self.sample_negative(actions, actors)
                 data += [self.idx2hot(neg_pairs, class_num=len(self.pairs))]
-                '''
-                data += [self.idx2hot(neg_actions, class_num=len(self.actions)),
-                         self.idx2hot(neg_actors, class_num=len(self.actors))]
-                '''
-
-            # pdb.set_trace()
-            if self.activations is not None:
-                data[0] = torch.from_numpy(
-                    self.activations[img_path[img_path.index('pngs320H'):]])
 
             data.append(img_path)
             return data

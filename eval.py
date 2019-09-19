@@ -20,6 +20,7 @@ from sklearn.metrics import average_precision_score
 
 import matplotlib.pyplot as plt
 
+
 def Precision(X_pre, X_gt):
     N = len(X_pre)
     p = 0.0
@@ -142,6 +143,7 @@ def eval_joint_classification(args, model_path='joint_classification/snap/'):
     plt.savefig('./save/joint_classification/imgs/snaps_eval_mAP.png')
     plt.close()
 
+
 def eval_split_classification(args):
     valid = {11: 0, 12: 1, 13: 2, 15: 3, 16: 4, 17: 5, 18: 6, 19: 7, 21: 8,
              22: 9, 26: 10, 28: 11, 29: 12, 34: 13, 35: 14, 36: 15, 39: 16,
@@ -240,7 +242,6 @@ def eval_actor_or_action_classification(args):
     total_res = []
     total_label = []
     with torch.no_grad():
-        abc = 0
         for iter, pack in enumerate(val_loader):
             imgs = pack[0]  # (N,t,c,m,n)
             labels = pack[1]
@@ -267,35 +268,26 @@ def eval_actor_or_action_classification(args):
     get_eval(total_res, total_label)
 
 
-def eval_composition_1(args, model_path='composition_train/snap/'):
-    val_transform = transforms.Compose([
-        transforms.Resize((args.input_size+32, args.input_size+32)),
-        transforms.CenterCrop((args.input_size, args.input_size)),
-        transforms.ToTensor(),
-        transforms.Normalize([0.4569, 0.4335, 0.3892],
-                             [0.2093, 0.2065, 0.2046])
-    ])
-
-    val_dataset = A2DComposition(args, val_transform, mode='val')
+def eval_composition_1(args, model_path='./composition_train/snap/'):
+    val_dataset = A2DComposition(args, None, mode='val')
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
-    #model = ManifoldModel(dset=val_dataset, args=args)
+    model = ManifoldModel(dset=val_dataset, args=args)
 
     snapList = os.listdir(os.path.join(args.save_root, model_path))
-    mapList = np.zeros(len(snapList)).tolist()
+    snapList.sort(key=lambda x:int(x.split('.')[0].split('_')[1]))
+    mapList = []
     bestmodelNum = None
     best_mAP = None
     for snap in snapList:
-        print(snap)
-        model = ManifoldModel(dset=val_dataset, args=args)
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, model_path, snap), map_location='cpu')['state_dict'])
         model.gen_joint_aa()
-        
+
         if args.cuda:
             model.cuda()
-        
+
         res = []
         label = []
         for _, pack in enumerate(val_loader):
@@ -306,11 +298,11 @@ def eval_composition_1(args, model_path='composition_train/snap/'):
         res = np.concatenate(res, axis=0)
         label = np.concatenate(label, axis=0)
         mAP = get_eval(res, label)
-        mapList[int(snap.split('.')[0].split('_')[1])] = mAP
+        mapList.append(mAP)
         if best_mAP is None or mAP > best_mAP:
             best_mAP = mAP
             bestmodelNum = int(snap.split('.')[0].split('_')[1])
-        print()
+
     print('best mAP:{}'.format(best_mAP))
     print('best model:{}'.format('snap_'+str(bestmodelNum)))
     plt.figure()

@@ -36,7 +36,7 @@ def get_finetune_optimizer(args, model, epoch):
                        {'params': last_bias_list, 'lr': lr*20}], weight_decay=args.wt_dec)
 
 
-def get_op_optimizer(args, model, epoch):
+def get_op_optimizer(args, model):
     attr_params = [param for name, param in model.named_parameters(
     ) if 'attr_op' in name and param.requires_grad]
     other_params = [param for name, param in model.named_parameters(
