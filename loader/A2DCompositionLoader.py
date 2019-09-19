@@ -95,13 +95,16 @@ class A2DComposition(tdata.Dataset):
 
         for item in labels:
             label_list = item.split(' ')
+            indexPair += list(map(lambda label: int(float(label)), label_list))
+            indexActors += list(map(lambda label: int(float(label)) // 10, label_list))
+            indexActions += list(map(lambda label: int(float(label)) % 10, label_list))
+            '''
             for label in label_list:
                 label = int(float(label))
-
                 indexPair.append(label)
                 indexActors.append(label // 10)
                 indexActions.append(label % 10)
-
+            '''
         indexActors = sorted(np.unique(indexActors).tolist())
         indexActions = sorted(np.unique(indexActions).tolist())
         indexPair = sorted(np.unique(indexPair).tolist())
@@ -109,22 +112,31 @@ class A2DComposition(tdata.Dataset):
         return indexActors, indexActions, indexPair
 
     def indexactor2string(self, indexlabel):
-        strlabel = []
+        #strlabel = []
+        strlabel = list(map(lambda item: self.actors_dict[item], indexlabel))
+        '''
         for item in indexlabel:
             strlabel.append(self.actors_dict[item])
+        '''
         return strlabel
 
     def indexaction2string(self, indexlabel):
-        strlabel = []
+        #strlabel = []
+        strlabel = list(map(lambda item: self.actions_dict[item], indexlabel))
+        '''
         for item in indexlabel:
             strlabel.append(self.actions_dict[item])
+        '''
         return strlabel
 
     def indexpair2string(self, indexlabel):
-        strlabel = []
+        #strlabel = []
+        strlabel = list(map(lambda item: self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10], indexlabel))
+        '''
         for item in indexlabel:
             strlabel.append(
                 self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10])
+        '''
         return strlabel
 
     def get_split_info(self):
@@ -140,24 +152,38 @@ class A2DComposition(tdata.Dataset):
             img_path = os.path.join(self.args.a2d_root, item['img_id'])
             video_name = item['img_id'].split('/')[1]
             img_frame = int(item['img_id'].split('/')[-1].split('.')[0])
-            t_img_path = []
+            #t_img_path = []
 
+            if self.args.t == 0:
+                t_img_path = list(os.path.join(self.args.a2d_root, 'pngs320H', video_name, str(img_frame).zfill(5) + '.png'))
+            else:
+                t_img_path = list(map(lambda t: os.path.join(self.args.a2d_root, 'pngs320H', video_name, str(img_frame + t).zfill(5) + '.png'), list(range(-self.args.t, self.args.t + 1))))
+
+
+            '''
             for i in range(-self.args.t, self.args.t + 1):
                 t_img_name = str(img_frame + i).zfill(5)
                 t_img_path.append(os.path.join(
                     self.args.a2d_root, 'pngs320H', video_name, t_img_name + '.png'))
+            '''
 
-            actors = []
-            actions = []
+            #actors = []
+            #actions = []
 
             labels = item['label']
             label_list = labels.split(' ')
+
+            actors = list(map(lambda label: self.actors_dict[int(float(label)) // 10], label_list))
+            actions = list(map(lambda label: self.actors_dict[int(float(label)) % 10], label_list))
+
+            '''
             for label in label_list:
                 label = int(float(label))
                 strActor = self.actors_dict[label // 10]
                 strAction = self.actions_dict[label % 10]
                 actors.append(strActor)
                 actions.append(strAction)
+            '''
 
             item_data.append(img_path)
             item_data.append(t_img_path)
@@ -195,15 +221,18 @@ class A2DComposition(tdata.Dataset):
             if len(choice_index_list) == len(set(choice_index_list)):
                 break
 
-        samples = []
-        pos_pairs = []
-        
+        #samples = []
+        #pos_pairs = []
+        '''
         for i in range(len(actors)):
             pos_pairs.append(actors[i] + ' ' + actions[i])
 
         for index in choice_index_list:
             samples.append(self.train_pairs[index])
-        
+        '''
+        pos_pairs = list(map(lambda actor,action: actor+' '+action, actors, actions))
+        samples = list(map(lambda index: self.train_pairs[index], choice_index_list))
+
         if sorted(samples) == sorted(pos_pairs):
             return self.sample_negative(actions, actors)
         else:
