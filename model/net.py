@@ -33,6 +33,9 @@ class JointClassifier(nn.Module):
         self.adapool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.fc2 = nn.Linear(2048, self.args.class_num)
 
+        for param in self.parameters():
+            param.requires_grad = False
+
     def forward(self, x):
         x = self.backbone(x)
         fc = self.adapool(x).squeeze()

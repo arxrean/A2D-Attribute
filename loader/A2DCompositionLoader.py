@@ -10,11 +10,12 @@ from keras.utils import to_categorical
 
 
 class A2DComposition(tdata.Dataset):
-    def __init__(self, args, transform=None, mode='train'):
+    def __init__(self, args, transform=None, backbone_embedder=None, mode='train'):
         self.args = args
         self.transform = transform
         self.mode = mode
         self.csv = pd.read_csv(args.csv_path)
+        self.backbone_embedder = backbone_embedder
 
         self.maxlenlabel, self.train_label_len_probability = self.train_sample_probability()
 
@@ -99,8 +100,10 @@ class A2DComposition(tdata.Dataset):
         for item in labels:
             label_list = item.split(' ')
             indexPair += list(map(lambda label: int(float(label)), label_list))
-            indexActors += list(map(lambda label: int(float(label)) // 10, label_list))
-            indexActions += list(map(lambda label: int(float(label)) % 10, label_list))
+            indexActors += list(map(lambda label: int(float(label)
+                                                      ) // 10, label_list))
+            indexActions += list(map(lambda label: int(float(label)) %
+                                     10, label_list))
             '''
             for label in label_list:
                 label = int(float(label))
@@ -134,7 +137,8 @@ class A2DComposition(tdata.Dataset):
 
     def indexpair2string(self, indexlabel):
         #strlabel = []
-        strlabel = list(map(lambda item: self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10], indexlabel))
+        strlabel = list(map(
+            lambda item: self.actors_dict[item // 10] + ' ' + self.actions_dict[item % 10], indexlabel))
         '''
         for item in indexlabel:
             strlabel.append(
@@ -158,10 +162,11 @@ class A2DComposition(tdata.Dataset):
             #t_img_path = []
 
             if self.args.t == 0:
-                t_img_path = list(os.path.join(self.args.a2d_root, 'pngs320H', video_name, str(img_frame).zfill(5) + '.png'))
+                t_img_path = list(os.path.join(
+                    self.args.a2d_root, 'pngs320H', video_name, str(img_frame).zfill(5) + '.png'))
             else:
-                t_img_path = list(map(lambda t: os.path.join(self.args.a2d_root, 'pngs320H', video_name, str(img_frame + t).zfill(5) + '.png'), list(range(-self.args.t, self.args.t + 1))))
-
+                t_img_path = list(map(lambda t: os.path.join(self.args.a2d_root, 'pngs320H', video_name, str(
+                    img_frame + t).zfill(5) + '.png'), list(range(-self.args.t, self.args.t + 1))))
 
             '''
             for i in range(-self.args.t, self.args.t + 1):
@@ -176,8 +181,10 @@ class A2DComposition(tdata.Dataset):
             labels = item['label']
             label_list = labels.split(' ')
 
-            actors = list(map(lambda label: self.actors_dict[int(float(label)) // 10], label_list))
-            actions = list(map(lambda label: self.actors_dict[int(float(label)) % 10], label_list))
+            actors = list(
+                map(lambda label: self.actors_dict[int(float(label)) // 10], label_list))
+            actions = list(
+                map(lambda label: self.actors_dict[int(float(label)) % 10], label_list))
 
             '''
             for label in label_list:
@@ -218,15 +225,19 @@ class A2DComposition(tdata.Dataset):
         return maxlenlabel, train_label_len_probability
 
     def sample_negative(self, actions, actors):
-        sample_num = np.random.choice(self.maxlenlabel, p=self.train_label_len_probability) + 1
+        sample_num = np.random.choice(
+            self.maxlenlabel, p=self.train_label_len_probability) + 1
 
         while(True):
-            choice_index_list = np.random.choice(len(self.train_pairs), sample_num)
+            choice_index_list = np.random.choice(
+                len(self.train_pairs), sample_num)
             if len(choice_index_list) == len(set(choice_index_list)):
                 break
 
-        pos_pairs = list(map(lambda actor,action: actor+' '+action, actors, actions))
-        samples = list(map(lambda index: self.train_pairs[index], choice_index_list))
+        pos_pairs = list(map(lambda actor, action: actor +
+                             ' '+action, actors, actions))
+        samples = list(
+            map(lambda index: self.train_pairs[index], choice_index_list))
 
         if sorted(samples) == sorted(pos_pairs):
             return self.sample_negative(actions, actors)
@@ -245,9 +256,8 @@ class A2DComposition(tdata.Dataset):
         # pdb.set_trace()
 
         if self.args.t == 0:
-            # pdb.set_trace()
-            img = self.transform(Image.open(img_path).convert('RGB')) if self.activations is None else torch.from_numpy(
-                self.activations[img_path[img_path.index('pngs320H'):]])
+            pdb.set_trace()
+            img = self.transform(Image.open(img_path).convert('RGB'))
 
             data = [img, self.idx2hot([self.pair2idx['{} {}'.format(
                 actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]

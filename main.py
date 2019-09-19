@@ -208,7 +208,15 @@ def split_classification(args):
 
 
 def composition_train(args):
-	train_dataset = A2DComposition(args, None, mode='train')
+	train_transform = transforms.Compose([
+		transforms.RandomResizedCrop((args.input_size, args.input_size)),
+		transforms.RandomHorizontalFlip(),
+		transforms.ToTensor(),
+		transforms.Normalize([0.4569, 0.4335, 0.3892],
+							 [0.2093, 0.2065, 0.2046])
+	])
+
+	train_dataset = A2DComposition(args, train_transform, backbone_embedder=getJointClassifier(args), mode='train')
 
 	train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
 							  pin_memory=True, drop_last=True, shuffle=True)
