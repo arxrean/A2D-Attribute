@@ -255,8 +255,7 @@ class A2DComposition(tdata.Dataset):
         # pdb.set_trace()
 
         if self.args.t == 0:
-            #pdb.set_trace()
-            img = self.transform(Image.open(img_path).convert('RGB'))
+            img = self.backbone_embedder(self.transform(Image.open(img_path).convert('RGB')).unsqueeze(0))[1]
 
             data = [img, self.idx2hot([self.pair2idx['{} {}'.format(
                 actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]

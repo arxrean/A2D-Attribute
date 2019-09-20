@@ -141,6 +141,13 @@ class ManifoldModel(nn.Module):
             [nn.Parameter(torch.eye(args.op_img_dim)) for _ in range(len(self.dset.actions))])
         self.obj_embedder = nn.Embedding(len(dset.actors), args.op_img_dim)
 
+        # Constraint
+        if self.args.constraint_cls > 0:
+            self.constraint_actor_clf = nn.Linear(
+                self.args.op_img_dim, self.args.actor_num)
+            self.constraint_action_clf = nn.Linear(
+                self.args.op_img_dim, self.args.action_num)
+
         glove_pretrained_weight = load_word_embeddings(
             './repo/actors_glove.npy', dset.actors)
         self.obj_embedder.weight.data.copy_(glove_pretrained_weight)
@@ -175,16 +182,11 @@ class ManifoldModel(nn.Module):
         return actors_idx, actions_idx
 
     def train_forward(self, x):
-        #img, pairs, neg_action, neg_actor, img_path = x[0], x[1], x[2], x[3], x[4]
-
         img, pairs, neg_pairs, img_path = x[0], x[1], x[2], x[3]
 
         actors, actions = self.onehot2idx(pairs)
 
         neg_actors, neg_actions = self.onehot2idx(neg_pairs)
-
-        loss = []
-        # pdb.set_trace()
 
         feature = self.image_embedder(img.cuda() if self.args.cuda else img)
 
@@ -200,7 +202,8 @@ class ManifoldModel(nn.Module):
 
         # negative
         # pdb.set_trace()
-        neg_actor_emb = list(map(lambda neg_actor: self.obj_embedder(neg_actor), neg_actors))
+        neg_actor_emb = list(
+            map(lambda neg_actor: self.obj_embedder(neg_actor), neg_actors))
         neg_actions = list(map(lambda neg_action: torch.stack(
             list(map(lambda idx: self.action_ops[idx], neg_action))), neg_actions))
 
@@ -209,20 +212,22 @@ class ManifoldModel(nn.Module):
         negative = torch.stack(list(map(lambda pair: torch.mean(self.apply_ops(
             pair[1], pair[0]), dim=0, keepdim=True), neg_pairs)), dim=0).squeeze()
 
-
         loss_triplet = F.triplet_margin_loss(
             feature, positive, negative, margin=self.margin)
-        loss.append(loss_triplet)
 
-        loss = sum(loss)
-        return loss, None
+        # cls constraint
+        if self.args.constraint_cls > 0:
+            actor_pred = self.constraint_actor_clf(positive)
+            action_pred = self.constraint_action_clf(positive)
+
+        return loss_triplet, actor_pred, action_pred
 
     def infer_forward(self, x):
         img, pairs, img_path = x[0], x[1], x[2]
         img_emd = self.image_embedder(
             img.cuda() if self.args.cuda else img).detach().cpu().numpy()
         distance_distribution = np.expand_dims(1/np.array(list(
-            map(lambda j: np.linalg.norm(img_emd-j), self.composition_res))), 0)    
+            map(lambda j: np.linalg.norm(img_emd-j), self.composition_res))), 0)
 
         return distance_distribution, pairs
 
