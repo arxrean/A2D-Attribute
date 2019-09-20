@@ -184,7 +184,7 @@ class A2DComposition(tdata.Dataset):
             actors = list(
                 map(lambda label: self.actors_dict[int(float(label)) // 10], label_list))
             actions = list(
-                map(lambda label: self.actors_dict[int(float(label)) % 10], label_list))
+                map(lambda label: self.actions_dict[int(float(label)) % 10], label_list))
 
             '''
             for label in label_list:
@@ -205,7 +205,6 @@ class A2DComposition(tdata.Dataset):
             else:
                 test_data.append(item_data)
         ##################
-
         return train_data, test_data
 
     def train_sample_probability(self):
@@ -256,7 +255,7 @@ class A2DComposition(tdata.Dataset):
         # pdb.set_trace()
 
         if self.args.t == 0:
-            pdb.set_trace()
+            #pdb.set_trace()
             img = self.transform(Image.open(img_path).convert('RGB'))
 
             data = [img, self.idx2hot([self.pair2idx['{} {}'.format(
@@ -266,6 +265,7 @@ class A2DComposition(tdata.Dataset):
                 data += [self.idx2hot(neg_pairs, class_num=len(self.pairs))]
 
             data.append(img_path)
+
             return data
 
     def __len__(self):
