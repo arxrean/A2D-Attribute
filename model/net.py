@@ -182,7 +182,7 @@ class ManifoldModel(nn.Module):
         return actors_idx, actions_idx
 
     def train_forward(self, x):
-        img, pairs, neg_pairs, img_path = x[0], x[1], x[2], x[3]
+        img, pairs, neg_pairs, img_path = x[0], x[1], x[-2], x[-1]
 
         actors, actions = self.onehot2idx(pairs)
 
