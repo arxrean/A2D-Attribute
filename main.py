@@ -240,11 +240,11 @@ def composition_train(args):
         train_loss.append(0)
         for _, pack in enumerate(train_loader):
             trip_loss, actor_pred, action_pred = model.train_forward(pack)
-            pos_pairs = pack[1]
+            #pos_pairs = pack[1]
 
             # one-hot 0/1 vector
-            pos_actors = None
-            pos_actions = None
+            pos_actors = pack[2]
+            pos_actions = pack[3]
             actor_pred_loss = cls_criterion.get_loss(actor_pred, pos_actors)
             action_pred_loss = cls_criterion.get_loss(action_pred, pos_actions)
 
