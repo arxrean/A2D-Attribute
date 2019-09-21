@@ -249,6 +249,14 @@ class A2DComposition(tdata.Dataset):
         #label = np.where(label > 1, 1, label)
 
         return label
+    
+    def spidx2hot(self, idx_list, class_num):
+        label = to_categorical(idx_list, num_classes=class_num)
+        label = label.sum(axis=0)
+        label = np.where(label > 1, 1, label)
+         
+        return label
+
 
     def __getitem__(self, index):
         img_path, t_img_path, actors, actions = self.data[index]
@@ -258,7 +266,9 @@ class A2DComposition(tdata.Dataset):
             img = self.backbone_embedder(self.transform(Image.open(img_path).convert('RGB')).unsqueeze(0))[1]
 
             data = [img, self.idx2hot([self.pair2idx['{} {}'.format(
-                actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs))]
+                actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs)), self.spidx2hot(
+                    [self.actor2idx[actor] for actor in actors], class_num=len(self.actors)), self.spidx2hot(
+                        [self.action2idx[action] for action in actions], class_num=len(self.actions))]
             if self.mode == 'train':
                 neg_pairs = self.sample_negative(actions, actors)
                 data += [self.idx2hot(neg_pairs, class_num=len(self.pairs))]
