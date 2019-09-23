@@ -16,7 +16,7 @@ def p_parse():
 	# config
 	parser.add_argument("--num_workers", default=8, type=int)
 	parser.add_argument("--batch_size", default=512, type=int)
-	parser.add_argument("--max_epoches", default=5000, type=int)
+	parser.add_argument("--max_epoches", default=1000, type=int)
 	parser.add_argument("--cuda", default=False, type=bool)
 	parser.add_argument("--pretrained", default=True, type=bool)
 	parser.add_argument("--use_feat", default=True, type=bool)
@@ -26,11 +26,11 @@ def p_parse():
 	parser.add_argument("--wt_dec", default=5e-4, type=float)
 	parser.add_argument("--op_img_dim", default=300, type=int)
 	parser.add_argument("--triplet_margin", default=1.0, type=float)
-	parser.add_argument("--constraint_cls", default=0.5, type=float)
+	parser.add_argument("--constraint_cls", default=1.0, type=float)
 	# save
 	parser.add_argument("--save_root", default='./save/', type=str)
 	# feature
-	parser.add_argument("--feature_path",default='./repo/joint_img_feature.npy')
+	parser.add_argument("--feature_path",default='./repo/joint_img_feature_mono.npy')
 
 	args = parser.parse_args()
 

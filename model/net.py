@@ -223,13 +223,16 @@ class ManifoldModel(nn.Module):
         return loss_triplet, actor_pred, action_pred
 
     def infer_forward(self, x):
-        img, pairs, img_path = x[0], x[1], x[2]
+        img, pairs = x[0], x[1]
         img_emd = self.image_embedder(
             img.cuda() if self.args.cuda else img).detach().cpu().numpy()
-        distance_distribution = np.expand_dims(1/np.array(list(
-            map(lambda j: np.linalg.norm(img_emd-j), self.composition_res))), 0)
+        distance_distribution = np.array(list(
+            map(lambda j: np.linalg.norm(img_emd-j), self.composition_res)))
 
-        return distance_distribution, pairs
+        prob_distribution = np.expand_dims(1/distance_distribution, 0)
+
+        # pdb.set_trace()
+        return prob_distribution, pairs
 
     def compose(self, actions, actors):
         obj_rep = self.obj_embedder(actors)
@@ -244,6 +247,7 @@ class ManifoldModel(nn.Module):
         return out
 
     def gen_joint_aa(self):
+        # pdb.set_trace()
         eval_joint_dict = {}
         val_actors = self.obj_embedder(
             torch.LongTensor([0, 1, 2, 3, 4, 5, 6]))

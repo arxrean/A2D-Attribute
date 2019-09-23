@@ -5,17 +5,19 @@ import pandas as pd
 import os
 import pdb
 from PIL import Image
+import time
 
 from keras.utils import to_categorical
 
 
+
+
 class A2DComposition(tdata.Dataset):
-    def __init__(self, args, transform=None, backbone_embedder=None, mode='train'):
+    def __init__(self, args, transform=None, mode='train'):
         self.args = args
         self.transform = transform
         self.mode = mode
         self.csv = pd.read_csv(args.csv_path)
-        self.backbone_embedder = backbone_embedder
 
         self.maxlenlabel, self.train_label_len_probability = self.train_sample_probability()
 
@@ -56,11 +58,11 @@ class A2DComposition(tdata.Dataset):
         if self.args.use_feat:
             # pre-joint features path
             feat_file = args.feature_path
-            activation_data = np.load(feat_file, allow_pickle=True).tolist()
+            self.activations = np.load(feat_file).tolist() # already a dict
             # activation_data = torch.load(feat_file) # [features,names] features=>(N,d)
-            self.activations = dict(
-                zip(activation_data['id'], activation_data['res']))
-            self.feat_dim = len(activation_data['res'][0])  # d
+            # self.activations = dict(
+            #     zip(activation_data['id'], activation_data['res']))
+            self.feat_dim = 2048
         else:
             self.activations = None
 
@@ -168,16 +170,6 @@ class A2DComposition(tdata.Dataset):
                 t_img_path = list(map(lambda t: os.path.join(self.args.a2d_root, 'pngs320H', video_name, str(
                     img_frame + t).zfill(5) + '.png'), list(range(-self.args.t, self.args.t + 1))))
 
-            '''
-            for i in range(-self.args.t, self.args.t + 1):
-                t_img_name = str(img_frame + i).zfill(5)
-                t_img_path.append(os.path.join(
-                    self.args.a2d_root, 'pngs320H', video_name, t_img_name + '.png'))
-            '''
-
-            #actors = []
-            #actions = []
-
             labels = item['label']
             label_list = labels.split(' ')
 
@@ -185,15 +177,6 @@ class A2DComposition(tdata.Dataset):
                 map(lambda label: self.actors_dict[int(float(label)) // 10], label_list))
             actions = list(
                 map(lambda label: self.actions_dict[int(float(label)) % 10], label_list))
-
-            '''
-            for label in label_list:
-                label = int(float(label))
-                strActor = self.actors_dict[label // 10]
-                strAction = self.actions_dict[label % 10]
-                actors.append(strActor)
-                actions.append(strAction)
-            '''
 
             item_data.append(img_path)
             item_data.append(t_img_path)
@@ -260,15 +243,18 @@ class A2DComposition(tdata.Dataset):
 
     def __getitem__(self, index):
         img_path, t_img_path, actors, actions = self.data[index]
-        # pdb.set_trace()
 
         if self.args.t == 0:
-            img = self.backbone_embedder(self.transform(Image.open(img_path).convert('RGB')).unsqueeze(0))[1]
+            # pdb.set_trace()
+            pre_img_list=self.activations[img_path[img_path.index('pngs320H'):]]
+            img = pre_img_list[np.random.choice(len(pre_img_list), 1)[0]]
+            # img = img if self.mode=='train' else img.cpu().numpy()
 
             data = [img, self.idx2hot([self.pair2idx['{} {}'.format(
                 actors[i], actions[i])] for i in range(len(actors))], class_num=len(self.pairs)), self.spidx2hot(
                     [self.actor2idx[actor] for actor in actors], class_num=len(self.actors)), self.spidx2hot(
                         [self.action2idx[action] for action in actions], class_num=len(self.actions))]
+
             if self.mode == 'train':
                 neg_pairs = self.sample_negative(actions, actors)
                 data += [self.idx2hot(neg_pairs, class_num=len(self.pairs))]

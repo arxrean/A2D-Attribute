@@ -9,6 +9,7 @@ from torch import Tensor
 import numpy as np
 import shutil
 import matplotlib.pyplot as plt
+import time
 
 from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
 from loader.A2DCompositionLoader import A2DComposition
@@ -16,6 +17,7 @@ from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
 from utils.opt import get_finetune_optimizer, get_op_optimizer
 from utils.helper import get_pos_weight, bce_weight_loss
 from glob import p_parse
+import pdb
 
 
 def joint_classification(args):
@@ -208,18 +210,10 @@ def split_classification(args):
 
 
 def composition_train(args):
-    train_transform = transforms.Compose([
-        transforms.RandomResizedCrop((args.input_size, args.input_size)),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Normalize([0.4569, 0.4335, 0.3892],
-                             [0.2093, 0.2065, 0.2046])
-    ])
-
     train_dataset = A2DComposition(
-        args, train_transform, backbone_embedder=getJointClassifier(args), mode='train')
+        args, None, mode='train')
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=0,
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.num_workers,
                               pin_memory=True, drop_last=True, shuffle=True)
 
     model = ManifoldModel(dset=train_dataset, args=args)
@@ -240,15 +234,15 @@ def composition_train(args):
         train_loss.append(0)
         for _, pack in enumerate(train_loader):
             trip_loss, actor_pred, action_pred = model.train_forward(pack)
-            #pos_pairs = pack[1]
 
             # one-hot 0/1 vector
-            pos_actors = pack[2]
-            pos_actions = pack[3]
+            pos_actors = pack[2].cuda() if args.cuda else pack[2]
+            pos_actions = pack[3].cuda() if args.cuda else pack[3]
             actor_pred_loss = cls_criterion.get_loss(actor_pred, pos_actors)
             action_pred_loss = cls_criterion.get_loss(action_pred, pos_actions)
 
-            total_loss = trip_loss+actor_pred_loss+action_pred_loss
+            total_loss = trip_loss + \
+                (actor_pred_loss+action_pred_loss)*args.constraint_cls
             opt.zero_grad()
             total_loss.backward()
             opt.step()

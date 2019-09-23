@@ -8,10 +8,12 @@ import torch
 import torch.nn.functional as F
 from torch import Tensor
 import numpy as np
+import pdb
 
-from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
+# from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
 from loader.A2DCompositionLoader import A2DComposition
-from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
+# from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
+from model.net import ManifoldModel
 from glob import p_parse
 
 from keras.utils import to_categorical
@@ -69,7 +71,7 @@ def F1(X_pre, X_gt):
 
 def get_eval(X_pre, X_gt):
     mAP = meanAveragePrecision(X_pre, X_gt)
-    print('mAP:{}'.format(mAP))
+
     return mAP
 
 
@@ -273,14 +275,13 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
-    model = ManifoldModel(dset=val_dataset, args=args)
-
     snapList = os.listdir(os.path.join(args.save_root, model_path))
     snapList.sort(key=lambda x:int(x.split('.')[0].split('_')[1]))
     mapList = []
     bestmodelNum = None
     best_mAP = None
-    for snap in snapList:
+    for snap in snapList[3800:]:
+        model = ManifoldModel(dset=val_dataset, args=args)
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, model_path, snap), map_location='cpu')['state_dict'])
         model.gen_joint_aa()
@@ -298,6 +299,7 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
         res = np.concatenate(res, axis=0)
         label = np.concatenate(label, axis=0)
         mAP = get_eval(res, label)
+        print('snap:{} mAP:{}'.format(snap,mAP))
         mapList.append(mAP)
         if best_mAP is None or mAP > best_mAP:
             best_mAP = mAP
