@@ -58,7 +58,7 @@ class A2DComposition(tdata.Dataset):
         if self.args.use_feat:
             # pre-joint features path
             feat_file = args.feature_path
-            self.activations = np.load(feat_file).tolist() # already a dict
+            self.activations = np.load(feat_file, allow_pickle=True).tolist() # already a dict
             # activation_data = torch.load(feat_file) # [features,names] features=>(N,d)
             # self.activations = dict(
             #     zip(activation_data['id'], activation_data['res']))
