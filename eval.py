@@ -280,7 +280,8 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
     mapList = []
     bestmodelNum = None
     best_mAP = None
-    for snap in snapList[3800:]:
+    for snap in snapList:
+    #for snap in snapList[3800:]:
         model = ManifoldModel(dset=val_dataset, args=args)
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, model_path, snap), map_location='cpu')['state_dict'])
