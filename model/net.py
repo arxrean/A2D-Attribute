@@ -20,6 +20,7 @@ import cv2
 
 from model.backbone import res_block_50
 
+from itertools import combinations
 
 class JointClassifier(nn.Module):
 
@@ -263,7 +264,67 @@ class ManifoldModel(nn.Module):
             list_res.append(eval_joint_dict[i].detach().cpu().numpy())
 
         self.composition_res = np.stack(list_res)
+    
+    def gen_joint_combination_aa(self):
+        eval_joint_dict = {}
+        val_actors = self.obj_embedder(
+            torch.LongTensor([0, 1, 2, 3, 4, 5, 6]))
+        for i in range(len(val_actors)):
+            for j in range(len(self.valid_action)):
+                joint_aa = int('{}{}'.format(i+1, j+1))
+                if joint_aa in self.valid:
+                    eval_joint_dict[self.valid[joint_aa]] = torch.bmm(torch.stack(
+                        [self.action_ops[j]]), val_actors[i:i+1].unsqueeze(2)).squeeze()
+        
+        valid_values = list(self.valid.values())
+        ones = list(map(lambda item: [item], valid_values))
 
+        twos = list(combinations(valid_values, 2))
+        twos = list(map(lambda item: list(item), twos))
+
+        threes = list(combinations(valid_values, 3))
+        threes = list(map(lambda item: list(item), threes))
+
+        fours = list(combinations(valid_values, 4))
+        fours = list(map(lambda item: list(item), fours))
+
+        fives = list(combinations(valid_values, 5))
+        fives = list(map(lambda item: list(item), fives))
+
+        all_combinations = ones + twos + threes + fours + fives
+        #print(all_combinations)
+        #list_res = self.combinations2res(all_combinations, eval_joint_dict)
+
+        list_res = list(
+            map(lambda item: np.mean(
+                [eval_joint_dict[i].detach().cpu().numpy() for i in item], axis=0), all_combinations))
+        list_res = np.stack(list_res)
+        
+        all_combinations_str = list(map(self.combinations2str, all_combinations))
+
+        self.composition_combination_res = dict(zip(all_combinations_str, list_res))
+    
+    '''
+    def combinations2res(self, combination, jointdict):
+        print(len(combination))
+        all_res = []
+        for item in combination:
+            res = []
+            for i in item:
+                res.append(jointdict[i].detach().cpu().numpy())
+            res = np.mean(res, axis=0)
+            all_res.append(res)
+        return all_res
+    '''
+
+    def combinations2str(self, combination):
+        res = ''
+        length = len(combination)
+        for i in range(length):
+            res += str(combination[i])
+            if i != length-1:
+                res += ' '
+        return res
 
 def getJointClassifier(args):
     net = JointClassifier(backbone=res_block_50(args), args=args)
