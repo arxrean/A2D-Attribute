@@ -69,10 +69,14 @@ def F1(X_pre, X_gt):
     return p/N
 
 
-def get_eval(X_pre, X_gt):
-    mAP = meanAveragePrecision(X_pre, X_gt)
-
-    return mAP
+def get_eval(X_pre, X_gt, mode='mAP'):
+    if mode == 'mAP':
+        res = meanAveragePrecision(X_pre, X_gt)
+    elif mode == 'F1':
+        res = F1(X_pre, X_gt)
+    else:
+        raise RuntimeError('mode must be mAP or F1')  
+    return res
 
 
 def eval_joint_classification(args, model_path='joint_classification/snap/'):
@@ -277,9 +281,10 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
 
     snapList = os.listdir(os.path.join(args.save_root, model_path))
     snapList.sort(key=lambda x:int(x.split('.')[0].split('_')[1]))
-    mapList = []
+    eval_res_List = []
+    mode = 'mAP'
     bestmodelNum = None
-    best_mAP = None
+    best_eval_res = None
     for snap in snapList:
     #for snap in snapList[3800:]:
         model = ManifoldModel(dset=val_dataset, args=args)
@@ -299,21 +304,21 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
 
         res = np.concatenate(res, axis=0)
         label = np.concatenate(label, axis=0)
-        mAP = get_eval(res, label)
-        print('snap:{} mAP:{}'.format(snap,mAP))
-        mapList.append(mAP)
-        if best_mAP is None or mAP > best_mAP:
-            best_mAP = mAP
+        eval_res = get_eval(res, label, mode=mode)
+        print('snap:{} {}:{}'.format(snap, mode, eval_res))
+        eval_res_List.append(eval_res)
+        if best_eval_res is None or eval_res > best_eval_res:
+            best_eval_res = eval_res
             bestmodelNum = int(snap.split('.')[0].split('_')[1])
 
-    print('best mAP:{}'.format(best_mAP))
+    print('best {}:{}'.format(mode, best_eval_res))
     print('best model:{}'.format('snap_'+str(bestmodelNum)))
     plt.figure()
-    plt.plot(range(len(mapList)), mapList, label='composition mAP')
+    plt.plot(range(len(eval_res_List)), eval_res_List, label='composition {}'.format(mode))
     plt.legend()
     if not os.path.exists('./save/composition_train/imgs'):
         os.makedirs('./save/composition_train/imgs')
-    plt.savefig('./save/composition_train/imgs/snaps_eval_mAP.png')
+    plt.savefig('./save/composition_train/imgs/snaps_eval_{}.png'.format(mode))
     plt.close()
 
 
