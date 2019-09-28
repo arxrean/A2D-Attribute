@@ -22,7 +22,8 @@ import pdb
 
 def joint_classification(args):
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop((args.input_size, args.input_size)),
+        # transforms.RandomResizedCrop((args.input_size, args.input_size)),
+        transforms.Resize((args.input_size, args.input_size)),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize([0.4569, 0.4335, 0.3892],
@@ -50,6 +51,8 @@ def joint_classification(args):
 
     criterion = bce_weight_loss(args=args)
 
+    opt = get_finetune_optimizer(args, model)
+
     if os.path.exists('./save/joint_classification/snap/'):
         shutil.rmtree('./save/joint_classification/snap/')
     os.makedirs('./save/joint_classification/snap/')
@@ -57,8 +60,6 @@ def joint_classification(args):
     train_loss = []
     val_loss = []
     for epoch in range(args.max_epoches):
-        opt = get_finetune_optimizer(args, model, epoch)
-
         train_loss.append(0)
         val_loss.append(0)
         for _, pack in enumerate(train_loader):
@@ -87,7 +88,7 @@ def joint_classification(args):
                     labels = labels.cuda()
 
                 out, _ = model(imgs)
-                loss = criterion.get_loss(out, labels, nouse=True)
+                loss = criterion.get_loss(out, labels)
 
                 val_loss[-1] += loss.item()
 
@@ -95,6 +96,7 @@ def joint_classification(args):
             epoch, train_loss[-1], val_loss[-1]), flush=True)
 
         # plot
+        plt.figure()
         plt.plot(range(len(train_loss)), train_loss, label='train_loss')
         plt.plot(range(len(val_loss)), val_loss, label='val_loss')
         plt.legend()
@@ -235,14 +237,18 @@ def composition_train(args):
         for _, pack in enumerate(train_loader):
             trip_loss, actor_pred, action_pred = model.train_forward(pack)
 
-            # one-hot 0/1 vector
-            pos_actors = pack[2].cuda() if args.cuda else pack[2]
-            pos_actions = pack[3].cuda() if args.cuda else pack[3]
-            actor_pred_loss = cls_criterion.get_loss(actor_pred, pos_actors)
-            action_pred_loss = cls_criterion.get_loss(action_pred, pos_actions)
+            total_loss = trip_loss
 
-            total_loss = trip_loss + \
-                (actor_pred_loss+action_pred_loss)*args.constraint_cls
+            if actor_pred is not None:
+	            # one-hot 0/1 vector
+	            pos_actors = pack[2].cuda() if args.cuda else pack[2]
+	            pos_actions = pack[3].cuda() if args.cuda else pack[3]
+	            actor_pred_loss = cls_criterion.get_loss(actor_pred, pos_actors)
+	            action_pred_loss = cls_criterion.get_loss(action_pred, pos_actions)
+
+	            total_loss = trip_loss + \
+	                (actor_pred_loss+action_pred_loss)*args.constraint_cls
+
             opt.zero_grad()
             total_loss.backward()
             opt.step()

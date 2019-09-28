@@ -34,8 +34,8 @@ class JointClassifier(nn.Module):
         self.adapool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
         self.fc2 = nn.Linear(2048, self.args.class_num)
 
-        for param in self.parameters():
-            param.requires_grad = False
+        # for param in self.parameters():
+        #     param.requires_grad = False
 
     def forward(self, x):
         x = self.backbone(x)
@@ -105,6 +105,8 @@ class MLP(nn.Module):
             mod.append(nn.ReLU(True))
 
         mod.append(nn.Linear(inp_dim, out_dim, bias=bias))
+        mod.append(nn.ReLU(True))
+        mod.append(nn.Linear(out_dim, out_dim, bias=bias))
         if relu:
             mod.append(nn.ReLU(True))
 
@@ -221,7 +223,7 @@ class ManifoldModel(nn.Module):
             actor_pred = self.constraint_actor_clf(positive)
             action_pred = self.constraint_action_clf(positive)
 
-        return loss_triplet, actor_pred, action_pred
+        return loss_triplet, actor_pred if self.args.constraint_cls > 0 else None, action_pred if self.args.constraint_cls > 0 else None
 
     def infer_forward(self, x):
         img, pairs = x[0], x[1]
@@ -303,19 +305,6 @@ class ManifoldModel(nn.Module):
         all_combinations_str = list(map(self.combinations2str, all_combinations))
 
         self.composition_combination_res = dict(zip(all_combinations_str, list_res))
-    
-    '''
-    def combinations2res(self, combination, jointdict):
-        print(len(combination))
-        all_res = []
-        for item in combination:
-            res = []
-            for i in item:
-                res.append(jointdict[i].detach().cpu().numpy())
-            res = np.mean(res, axis=0)
-            all_res.append(res)
-        return all_res
-    '''
 
     def combinations2str(self, combination):
         res = ''
