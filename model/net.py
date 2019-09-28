@@ -22,6 +22,8 @@ from model.backbone import res_block_50
 
 from itertools import combinations
 
+from keras.utils import to_categorical
+
 class JointClassifier(nn.Module):
 
     def __init__(self, backbone, args):
@@ -234,6 +236,31 @@ class ManifoldModel(nn.Module):
 
         # pdb.set_trace()
         return prob_distribution, pairs
+
+    def infer_forward_combination(self, x):
+        img, pairs = x[0], x[1]
+        img_emd = self.image_embedder(
+            img.cuda() if self.args.cuda else img).detach().cpu().numpy()
+        
+        values = list(self.composition_combination_res.values())
+        keys = list(self.composition_combination_res.keys())
+
+        distance_distribution = list(
+            map(lambda j: np.linalg.norm(img_emd-j), values))
+        
+        res_pairs_str = keys[distance_distribution.index(min(distance_distribution))]
+        print(res_pairs_str)
+        res_label = self.strPairs2onehot(res_pairs_str)
+
+        # pdb.set_trace()
+        return res_label, pairs
+    
+    def strPairs2onehot(strPairs):
+        pairslist = strPairs.split(' ')
+        pairslist = np.array(pairslist, dtype=int)
+        label = to_categorical(pairslist, num_classes=len(self.valid)).sum(axis=0)
+
+        return label
 
     def compose(self, actions, actors):
         obj_rep = self.obj_embedder(actors)
