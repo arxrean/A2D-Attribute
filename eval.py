@@ -274,7 +274,7 @@ def eval_actor_or_action_classification(args):
     get_eval(total_res, total_label)
 
 
-def eval_composition_1(args, model_path='./composition_train/snap/'):
+def eval_composition_1(args, model_path='./composition_train/snap_0.1/'):
     val_dataset = A2DComposition(args, None, mode='val')
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
@@ -282,7 +282,8 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
     snapList = os.listdir(os.path.join(args.save_root, model_path))
     snapList.sort(key=lambda x:int(x.split('.')[0].split('_')[1]))
     eval_res_List = []
-    mode = 'mAP'
+    #mode = 'mAP'
+    mode = 'F1'
     bestmodelNum = None
     best_eval_res = None
     for snap in snapList:
@@ -290,7 +291,8 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
         model = ManifoldModel(dset=val_dataset, args=args)
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, model_path, snap), map_location='cpu')['state_dict'])
-        model.gen_joint_aa()
+        #model.gen_joint_aa()
+        model.gen_joint_combination_aa()
 
         if args.cuda:
             model.cuda()
@@ -298,7 +300,8 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
         res = []
         label = []
         for _, pack in enumerate(val_loader):
-            res_i, label_i = model.infer_forward(pack)
+            #res_i, label_i = model.infer_forward(pack)
+            res_i, label_i = model.infer_forward_combination(pack)
             res.append(res_i)
             label.append(label_i)
 
