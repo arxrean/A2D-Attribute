@@ -10,9 +10,9 @@ from torch import Tensor
 import numpy as np
 import pdb
 
-# from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
+from loader.A2DClsLoader import A2DClassification, A2DClassificationWithActorAction
 from loader.A2DCompositionLoader import A2DComposition
-# from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
+from model.net import getJointClassifier, getSplitClassifier, ManifoldModel
 from model.net import ManifoldModel
 from glob import p_parse
 
@@ -91,28 +91,18 @@ def eval_joint_classification(args, model_path='joint_classification/snap/'):
     val_loader = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
 
-    '''
-    model = getJointClassifier(args)
-    if args.cuda:
-        model = model.cuda()
-    '''
-
     snapList = os.listdir(os.path.join(args.save_root, model_path))
-    mapList = np.zeros(len(snapList)).tolist()
+    snapList.sort(key=lambda x: int(x.split('.')[0].split('_')[1]))
+    mapList = []
     bestmodelNum = None
     best_mAP = None
 
     for snap in snapList:
-        print(snap)
         model = getJointClassifier(args)
         if args.cuda:
             model = model.cuda()
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, model_path, snap), map_location='cpu')['state_dict'])
-        '''
-        model.load_state_dict(torch.load(os.path.join(
-            args.save_root, 'joint_classification/snap_25.pth.tar'), map_location='cpu')['state_dict'])
-        '''
 
         total_res = []
         total_label = []
@@ -132,13 +122,14 @@ def eval_joint_classification(args, model_path='joint_classification/snap/'):
 
         total_res = np.concatenate(total_res, axis=0)
         total_label = np.concatenate(total_label, axis=0)
-        #thd, f1, prec, recall = get_eval(total_res, total_label)
+
         mAP = get_eval(total_res, total_label)
-        mapList[int(snap.split('.')[0].split('_')[1])] = mAP
+        print('snap:{} mAP:{}'.format(snap, mAP))
+        mapList.append(mAP)
         if best_mAP is None or mAP > best_mAP:
             best_mAP = mAP
             bestmodelNum = int(snap.split('.')[0].split('_')[1])
-        print()
+            
     print('best mAP:{}'.format(best_mAP))
     print('best model:{}'.format('snap_'+str(bestmodelNum)))
     plt.figure()
@@ -287,7 +278,6 @@ def eval_composition_1(args, model_path='./composition_train/snap_0.1/'):
     bestmodelNum = None
     best_eval_res = None
     for snap in snapList:
-    #for snap in snapList[3800:]:
         model = ManifoldModel(dset=val_dataset, args=args)
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, model_path, snap), map_location='cpu')['state_dict'])
@@ -307,6 +297,7 @@ def eval_composition_1(args, model_path='./composition_train/snap_0.1/'):
 
         res = np.concatenate(res, axis=0)
         label = np.concatenate(label, axis=0)
+        
         eval_res = get_eval(res, label, mode=mode)
         print('snap:{} {}:{}'.format(snap, mode, eval_res))
         eval_res_List.append(eval_res)

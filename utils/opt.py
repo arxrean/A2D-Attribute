@@ -9,7 +9,7 @@ def get_optimizer(args, model, epoch):
     return optim.Adam([{'params': model.parameters(), 'lr': lr}], weight_decay=args.wt_dec)
 
 
-def get_finetune_optimizer(args, model, epoch):
+def get_finetune_optimizer(args, model):
     lr = args.lr
     weight_list = []
     bias_list = []
