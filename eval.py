@@ -45,7 +45,7 @@ def meanAveragePrecision(X_pre, X_gt):
             x.append(X_pre[index_sample][index_class])
             y.append(X_gt[index_sample][index_class])
         ave_pre.append(average_precision_score(y_true=y, y_score=x))
-
+    
     return np.sum(ave_pre)/class_num
 
 
@@ -61,7 +61,7 @@ def Recall(X_pre, X_gt):
 
 def F1(X_pre, X_gt):
     N = len(X_pre)
-    p = 0
+    p = 0.0
     for i in range(N):
         x = X_pre[i, :]
         y = X_gt[i, :]
@@ -265,7 +265,7 @@ def eval_actor_or_action_classification(args):
     get_eval(total_res, total_label)
 
 
-def eval_composition_1(args, model_path='./composition_train/snap_0.1/'):
+def eval_composition_1(args, model_path='./composition_train/snap/'):
     val_dataset = A2DComposition(args, None, mode='val')
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
@@ -289,7 +289,10 @@ def eval_composition_1(args, model_path='./composition_train/snap_0.1/'):
 
         res = []
         label = []
+        num = 0
         for _, pack in enumerate(val_loader):
+            print('num:{}'.format(num))
+            num += 1
             #res_i, label_i = model.infer_forward(pack)
             res_i, label_i = model.infer_forward_combination(pack)
             res.append(res_i)
@@ -297,7 +300,6 @@ def eval_composition_1(args, model_path='./composition_train/snap_0.1/'):
 
         res = np.concatenate(res, axis=0)
         label = np.concatenate(label, axis=0)
-        
         eval_res = get_eval(res, label, mode=mode)
         print('snap:{} {}:{}'.format(snap, mode, eval_res))
         eval_res_List.append(eval_res)
