@@ -107,8 +107,6 @@ class MLP(nn.Module):
             mod.append(nn.ReLU(True))
 
         mod.append(nn.Linear(inp_dim, out_dim, bias=bias))
-        mod.append(nn.ReLU(True))
-        mod.append(nn.Linear(out_dim, out_dim, bias=bias))
         if relu:
             mod.append(nn.ReLU(True))
 
