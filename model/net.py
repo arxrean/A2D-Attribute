@@ -243,16 +243,39 @@ class ManifoldModel(nn.Module):
 
         values = list(self.composition_combination_res.values())
         keys = list(self.composition_combination_res.keys())
-
-        distance_distribution = list(
-            map(lambda j: np.linalg.norm(img_emd-j), values))
         
-        res_pairs_str = keys[distance_distribution.index(min(distance_distribution))]
-        res_label = np.expand_dims(self.strPairs2onehot(res_pairs_str), 0)
+        img_emd_expand = torch.tensor(np.expand_dims(img_emd, axis=1))
+        values_expand = torch.tensor(np.expand_dims(values, axis=0))
+        
+        if self.args.cuda:
+            img_emd_expand.cuda()
+            values_expand.cuda()
 
+        distance_distribution = torch.sqrt(
+            torch.sum((img_emd_expand - values_expand)**2,dim=2)).detach().cpu().numpy().tolist()
+        
+        res_pairs_str = list(map(lambda item: keys[item.index(min(item))], distance_distribution))
+        
+        res_label = list(map(lambda pairs_str: self.strPairs2onehot(pairs_str), res_pairs_str))
+        
+        res_label = np.array(res_label)
+
+        #distance_distribution = list(map(lambda emb: list(map(lambda j: np.linalg.norm(emb-j), values)), img_emd))
+
+        '''
+        distance_distribution = []
+        for item in img_emd:
+            distance_distribution.append(list(map(lambda j: np.linalg.norm(item-j), values)))
+        '''
+        #distance_distribution = list(map(lambda j: np.linalg.norm(img_emd-j), values))
+        #res_pairs_str = list(map(lambda item: keys[item.index(min(item))], distance_distribution))
+        #res_pairs_str = keys[distance_distribution.index(min(distance_distribution))]
+        #res_label = list(map(lambda pairs_str: self.strPairs2onehot(pairs_str), res_pairs_str))
+        #res_label = np.expand_dims(self.strPairs2onehot(res_pairs_str), 0)
+        #res_label = np.array(res_label)
         # pdb.set_trace()
         return res_label, pairs
-    
+
     def strPairs2onehot(self, strPairs):
         pairslist = strPairs.split(' ')
         pairslist = np.array(pairslist, dtype=int)
