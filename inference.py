@@ -108,8 +108,8 @@ def gen_joint_feature_aug(args):
 							pin_memory=True, drop_last=False, shuffle=False)
 
 	model = getJointClassifier(args)
-	# model.load_state_dict(torch.load(os.path.join(
-	# 	args.save_root, 'joint_classification/snap/snap_31.pth.tar'), map_location='cpu')['state_dict'])
+	model.load_state_dict(torch.load(os.path.join(
+		args.save_root, 'joint_classification/snap/snap_31.pth.tar'), map_location='cpu')['state_dict'])
 	if args.cuda:
 		model = model.cuda()
 
