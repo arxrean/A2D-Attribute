@@ -297,6 +297,7 @@ def eval_composition_1(args, model_path='./composition_train/snap/'):
             res_i, label_i = model.infer_forward_combination(pack)
             res.append(res_i)
             label.append(label_i)
+            #break
 
         res = np.concatenate(res, axis=0)
         label = np.concatenate(label, axis=0)
