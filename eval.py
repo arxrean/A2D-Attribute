@@ -93,9 +93,10 @@ def eval_joint_classification(args, model_path='joint_classification/snap/'):
 
     snapList = os.listdir(os.path.join(args.save_root, model_path))
     snapList.sort(key=lambda x: int(x.split('.')[0].split('_')[1]))
-    mapList = []
+    resList = []
     bestmodelNum = None
-    best_mAP = None
+    best_res = None
+    mode = 'mAP'
 
     for snap in snapList:
         model = getJointClassifier(args)
@@ -123,21 +124,21 @@ def eval_joint_classification(args, model_path='joint_classification/snap/'):
         total_res = np.concatenate(total_res, axis=0)
         total_label = np.concatenate(total_label, axis=0)
 
-        mAP = get_eval(total_res, total_label)
-        print('snap:{} mAP:{}'.format(snap, mAP))
-        mapList.append(mAP)
-        if best_mAP is None or mAP > best_mAP:
-            best_mAP = mAP
+        res = get_eval(total_res, total_label, mode=mode)
+        print('snap:{} {}:{}'.format(snap, mode, res))
+        resList.append(res)
+        if best_res is None or res > best_res:
+            best_res = res
             bestmodelNum = int(snap.split('.')[0].split('_')[1])
             
-    print('best mAP:{}'.format(best_mAP))
+    print('best {}:{}'.format(mode, best_res))
     print('best model:{}'.format('snap_'+str(bestmodelNum)))
     plt.figure()
-    plt.plot(range(len(mapList)), mapList, label='joint_model mAP')
+    plt.plot(range(len(resList)), resList, label='joint_model {}'.format(mode))
     plt.legend()
     if not os.path.exists('./save/joint_classification/imgs'):
         os.makedirs('./save/joint_classification/imgs')
-    plt.savefig('./save/joint_classification/imgs/snaps_eval_mAP.png')
+    plt.savefig('./save/joint_classification/imgs/snaps_eval_{}.png'.format(mode))
     plt.close()
 
 
@@ -265,7 +266,7 @@ def eval_actor_or_action_classification(args):
     get_eval(total_res, total_label)
 
 
-def eval_composition_1(args, model_path='./composition_train/snap/'):
+def eval_composition_1(args, model_path='./composition_train/snap_test/'):
     val_dataset = A2DComposition(args, None, mode='val')
     val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
                             pin_memory=True, drop_last=False, shuffle=False)
