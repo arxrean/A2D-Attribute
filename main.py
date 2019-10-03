@@ -274,6 +274,6 @@ def composition_train(args):
 
 if __name__ == '__main__':
     args = p_parse()
-    joint_classification(args)
+    # joint_classification(args)
     # split_classification(args)
-    # composition_train(args)
+    composition_train(args)
