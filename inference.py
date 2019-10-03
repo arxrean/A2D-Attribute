@@ -109,7 +109,7 @@ def gen_joint_feature_aug(args):
 
 	model = getJointClassifier(args)
 	model.load_state_dict(torch.load(os.path.join(
-		args.save_root, 'joint_classification/snap/snap_31.pth.tar'), map_location='cpu')['state_dict'])
+		args.save_root, 'joint_classification/snap/snap_43.pth.tar'), map_location='cpu')['state_dict'])
 	if args.cuda:
 		model = model.cuda()
 
