@@ -24,6 +24,7 @@ from itertools import combinations
 
 from keras.utils import to_categorical
 
+
 class JointClassifier(nn.Module):
 
     def __init__(self, backbone, args):
@@ -117,6 +118,23 @@ class MLP(nn.Module):
         return output
 
 
+class Action_Net(nn.Module):
+    def __init__(self, args):
+        super(Action_Net, self).__init__()
+        self.args = args
+        self.input_dim = args.action_num
+
+        self.mod = nn.Sequential(
+            nn.Linear(self.input_dim, 512),
+            nn.ReLU(True),
+            nn.Linear(512, args.op_img_dim)
+        )
+
+    def forward(self, x):
+        output = self.mod(x)
+        return output
+
+
 class ManifoldModel(nn.Module):
 
     def __init__(self, dset, args):
@@ -140,8 +158,9 @@ class ManifoldModel(nn.Module):
         self.compare_metric = lambda img_feats, pair_embed: - \
             F.pairwise_distance(img_feats, pair_embed)
 
-        self.action_ops = nn.ParameterList(
-            [nn.Parameter(torch.eye(args.op_img_dim)) for _ in range(len(self.dset.actions))])
+        self.inter_action_ops = nn.ParameterList(
+            [nn.Parameter(torch.eye(args.op_img_dim)) for _ in range(2)])
+        self.gen_action_ops = Action_Net(args)
         self.obj_embedder = nn.Embedding(len(dset.actors), args.op_img_dim)
 
         # Constraint
@@ -194,9 +213,10 @@ class ManifoldModel(nn.Module):
         feature = self.image_embedder(img.cuda() if self.args.cuda else img)
 
         # positive
+        pdb.set_trace()
         actor_emb = list(map(lambda x: self.obj_embedder(x), actors))
         pos_actions = list(map(lambda action: torch.stack(
-            list(map(lambda idx: self.action_ops[idx], action))), actions))
+            list(map(lambda idx: self.compose_action(self.inter_action_ops, self.int2hot(idx, self.args.action_num)), action))), actions))
 
         pos_pairs = list(zip(actor_emb, pos_actions))
 
@@ -208,7 +228,7 @@ class ManifoldModel(nn.Module):
         neg_actor_emb = list(
             map(lambda neg_actor: self.obj_embedder(neg_actor), neg_actors))
         neg_actions = list(map(lambda neg_action: torch.stack(
-            list(map(lambda idx: self.action_ops[idx], neg_action))), neg_actions))
+            list(map(lambda idx: self.compose_action(self.inter_action_ops, self.int2hot(idx, self.args.action_num)), neg_action))), neg_actions))
 
         neg_pairs = list(zip(neg_actor_emb, neg_actions))
 
@@ -243,21 +263,23 @@ class ManifoldModel(nn.Module):
 
         values = list(self.composition_combination_res.values())
         keys = list(self.composition_combination_res.keys())
-        
+
         img_emd_expand = torch.tensor(np.expand_dims(img_emd, axis=1))
         values_expand = torch.tensor(np.expand_dims(values, axis=0))
-        
+
         if self.args.cuda:
             img_emd_expand.cuda()
             values_expand.cuda()
 
         distance_distribution = torch.sqrt(
-            torch.sum((img_emd_expand - values_expand)**2,dim=2)).detach().cpu().numpy().tolist()
-        
-        res_pairs_str = list(map(lambda item: keys[item.index(min(item))], distance_distribution))
-        
-        res_label = list(map(lambda pairs_str: self.strPairs2onehot(pairs_str), res_pairs_str))
-        
+            torch.sum((img_emd_expand - values_expand)**2, dim=2)).detach().cpu().numpy().tolist()
+
+        res_pairs_str = list(
+            map(lambda item: keys[item.index(min(item))], distance_distribution))
+
+        res_label = list(
+            map(lambda pairs_str: self.strPairs2onehot(pairs_str), res_pairs_str))
+
         res_label = np.array(res_label)
 
         #distance_distribution = list(map(lambda emb: list(map(lambda j: np.linalg.norm(emb-j), values)), img_emd))
@@ -279,21 +301,26 @@ class ManifoldModel(nn.Module):
     def strPairs2onehot(self, strPairs):
         pairslist = strPairs.split(' ')
         pairslist = np.array(pairslist, dtype=int)
-        label = to_categorical(pairslist, num_classes=len(self.valid)).sum(axis=0)
+        label = to_categorical(
+            pairslist, num_classes=len(self.valid)).sum(axis=0)
 
         return label
-
-    def compose(self, actions, actors):
-        obj_rep = self.obj_embedder(actors)
-        attr_ops = torch.stack([self.action_ops[attr.item()]
-                                for attr in attrs])
-        embedded_reps = self.apply_ops(attr_ops, obj_rep)
-        return embedded_reps
 
     def apply_ops(self, actions, actors):
         out = torch.bmm(actions, actors.unsqueeze(2)).squeeze(2)
         out = F.relu(out)
         return out
+
+    def compose_action(self, inter, gen_action):
+        middle = self.gen_action_ops(gen_action)
+
+        pass
+
+    def int2hot(self, intT, total_num):
+        arr = torch.zeros(total_num).cuda()
+        arr[intT] = 1
+
+        return arr
 
     def gen_joint_aa(self):
         # pdb.set_trace()
@@ -312,7 +339,7 @@ class ManifoldModel(nn.Module):
             list_res.append(eval_joint_dict[i].detach().cpu().numpy())
 
         self.composition_res = np.stack(list_res)
-    
+
     def gen_joint_combination_aa(self):
         eval_joint_dict = {}
         val_actors = self.obj_embedder(
@@ -323,7 +350,7 @@ class ManifoldModel(nn.Module):
                 if joint_aa in self.valid:
                     eval_joint_dict[self.valid[joint_aa]] = torch.bmm(torch.stack(
                         [self.action_ops[j]]), val_actors[i:i+1].unsqueeze(2)).squeeze()
-        
+
         valid_values = list(self.valid.values())
         ones = list(map(lambda item: [item], valid_values))
 
@@ -340,17 +367,19 @@ class ManifoldModel(nn.Module):
         fives = list(map(lambda item: list(item), fives))
 
         all_combinations = ones + twos + threes + fours + fives
-        #print(all_combinations)
+        # print(all_combinations)
         #list_res = self.combinations2res(all_combinations, eval_joint_dict)
 
         list_res = list(
             map(lambda item: np.mean(
                 [eval_joint_dict[i].detach().cpu().numpy() for i in item], axis=0), all_combinations))
         list_res = np.stack(list_res)
-        
-        all_combinations_str = list(map(self.combinations2str, all_combinations))
 
-        self.composition_combination_res = dict(zip(all_combinations_str, list_res))
+        all_combinations_str = list(
+            map(self.combinations2str, all_combinations))
+
+        self.composition_combination_res = dict(
+            zip(all_combinations_str, list_res))
 
     def combinations2str(self, combination):
         res = ''
@@ -360,6 +389,7 @@ class ManifoldModel(nn.Module):
             if i != length-1:
                 res += ' '
         return res
+
 
 def getJointClassifier(args):
     net = JointClassifier(backbone=res_block_50(args), args=args)
