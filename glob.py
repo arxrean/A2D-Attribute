@@ -5,8 +5,8 @@ def p_parse():
 	parser.add_argument("--session_name", default="a2d", type=str)
 	# data
 	parser.add_argument(
-		"--a2d_root", default='E:/A2D/Release', type=str)
-		#"--a2d_root", default='/u/zkou2/Data/A2D/Release', type=str)
+		# "--a2d_root", default='E:/A2D/Release', type=str)
+		"--a2d_root", default='/home/cxu-serve/p1/zkou2/A2D/Release', type=str)
 	parser.add_argument('--csv_path', default='./repo/newVideoSet.csv')
 	parser.add_argument('--t', type=int, default=0)
 	parser.add_argument('--input_size', type=int, default=224)

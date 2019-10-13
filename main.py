@@ -266,7 +266,7 @@ def composition_train(args):
         plt.savefig('./save/composition_train/imgs/train_line.png')
         plt.close()
 
-        snap_shot = {'epoch': epoch, 'train_loss': train_loss,
+        snap_shot = {'epoch': epoch, 'train_loss': train_loss, 'opt':opt,
                      'state_dict': model.state_dict()}
         torch.save(
             snap_shot, './save/composition_train/snap/snap_{}.pth.tar'.format(epoch))

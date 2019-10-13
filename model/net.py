@@ -213,7 +213,7 @@ class ManifoldModel(nn.Module):
         feature = self.image_embedder(img.cuda() if self.args.cuda else img)
 
         # positive
-        pdb.set_trace()
+        # pdb.set_trace()
         actor_emb = list(map(lambda x: self.obj_embedder(x), actors))
         pos_actions = list(map(lambda action: torch.stack(
             list(map(lambda idx: self.compose_action(self.inter_action_ops, self.int2hot(idx, self.args.action_num)), action))), actions))
@@ -227,8 +227,8 @@ class ManifoldModel(nn.Module):
         # pdb.set_trace()
         neg_actor_emb = list(
             map(lambda neg_actor: self.obj_embedder(neg_actor), neg_actors))
-        neg_actions = list(map(lambda neg_action: torch.stack(
-            list(map(lambda idx: self.compose_action(self.inter_action_ops, self.int2hot(idx, self.args.action_num)), neg_action))), neg_actions))
+        neg_actions = list(map(lambda action: torch.stack(
+            list(map(lambda idx: self.compose_action(self.inter_action_ops, self.int2hot(idx, self.args.action_num)), action))), neg_actions))
 
         neg_pairs = list(zip(neg_actor_emb, neg_actions))
 
@@ -285,10 +285,10 @@ class ManifoldModel(nn.Module):
         #distance_distribution = list(map(lambda emb: list(map(lambda j: np.linalg.norm(emb-j), values)), img_emd))
 
         '''
-        distance_distribution = []
-        for item in img_emd:
-            distance_distribution.append(list(map(lambda j: np.linalg.norm(item-j), values)))
-        '''
+		distance_distribution = []
+		for item in img_emd:
+			distance_distribution.append(list(map(lambda j: np.linalg.norm(item-j), values)))
+		'''
         #distance_distribution = list(map(lambda j: np.linalg.norm(img_emd-j), values))
         #res_pairs_str = list(map(lambda item: keys[item.index(min(item))], distance_distribution))
         #res_pairs_str = keys[distance_distribution.index(min(distance_distribution))]
@@ -314,7 +314,11 @@ class ManifoldModel(nn.Module):
     def compose_action(self, inter, gen_action):
         middle = self.gen_action_ops(gen_action)
 
-        pass
+        middle_m = torch.diag(middle)
+
+        res = torch.mm(torch.mm(inter[0], middle_m), inter[1])
+
+        return res
 
     def int2hot(self, intT, total_num):
         arr = torch.zeros(total_num).cuda()
