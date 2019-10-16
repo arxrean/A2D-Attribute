@@ -266,57 +266,53 @@ def eval_actor_or_action_classification(args):
     get_eval(total_res, total_label)
 
 
-def eval_composition_1(args, model_path='./composition_train/snap_test/'):
+def eval_composition_1(args, model_path='./composition_train/snap/'):
     val_dataset = A2DComposition(args, None, mode='val')
-    val_loader = DataLoader(val_dataset, batch_size=1, num_workers=0,
+    val_loader = DataLoader(val_dataset, batch_size=1, num_workers=args.num_workers,
                             pin_memory=True, drop_last=False, shuffle=False)
 
     snapList = os.listdir(os.path.join(args.save_root, model_path))
     snapList.sort(key=lambda x:int(x.split('.')[0].split('_')[1]))
     eval_res_List = []
-    #mode = 'mAP'
-    mode = 'F1'
+    
     bestmodelNum = None
     best_eval_res = None
     for snap in snapList:
         model = ManifoldModel(dset=val_dataset, args=args)
         model.load_state_dict(torch.load(os.path.join(
             args.save_root, model_path, snap), map_location='cpu')['state_dict'])
-        #model.gen_joint_aa()
-        model.gen_joint_combination_aa()
+        # model.gen_joint_combination_aa()
 
         if args.cuda:
             model.cuda()
+        model.gen_joint_aa()
 
         res = []
         label = []
-        num = 0
         for _, pack in enumerate(val_loader):
-            print('num:{}'.format(num))
-            num += 1
-            #res_i, label_i = model.infer_forward(pack)
-            res_i, label_i = model.infer_forward_combination(pack)
+            res_i, label_i = model.infer_forward(pack)
+            # res_i, label_i = model.infer_forward_combination(pack)
             res.append(res_i)
             label.append(label_i)
-            #break
+            # break
 
         res = np.concatenate(res, axis=0)
         label = np.concatenate(label, axis=0)
-        eval_res = get_eval(res, label, mode=mode)
-        print('snap:{} {}:{}'.format(snap, mode, eval_res))
+        eval_res = get_eval(res, label, mode=args.metric_mode)
+        print('snap:{} {}:{}'.format(snap, args.metric_mode, eval_res))
         eval_res_List.append(eval_res)
         if best_eval_res is None or eval_res > best_eval_res:
             best_eval_res = eval_res
             bestmodelNum = int(snap.split('.')[0].split('_')[1])
 
-    print('best {}:{}'.format(mode, best_eval_res))
+    print('best {}:{}'.format(args.metric_mode, best_eval_res))
     print('best model:{}'.format('snap_'+str(bestmodelNum)))
     plt.figure()
-    plt.plot(range(len(eval_res_List)), eval_res_List, label='composition {}'.format(mode))
+    plt.plot(range(len(eval_res_List)), eval_res_List, label='composition {}'.format(args.metric_mode))
     plt.legend()
     if not os.path.exists('./save/composition_train/imgs'):
         os.makedirs('./save/composition_train/imgs')
-    plt.savefig('./save/composition_train/imgs/snaps_eval_{}.png'.format(mode))
+    plt.savefig('./save/composition_train/imgs/snaps_eval_{}.png'.format(args.metric_mode))
     plt.close()
 
 

@@ -161,6 +161,7 @@ class ManifoldModel(nn.Module):
         self.inter_action_ops = nn.ParameterList(
             [nn.Parameter(torch.eye(args.op_img_dim)) for _ in range(2)])
         self.gen_action_ops = Action_Net(args)
+
         self.obj_embedder = nn.Embedding(len(dset.actors), args.op_img_dim)
 
         # Constraint
@@ -321,7 +322,9 @@ class ManifoldModel(nn.Module):
         return res
 
     def int2hot(self, intT, total_num):
-        arr = torch.zeros(total_num).cuda()
+        arr = torch.zeros(total_num)
+        if self.args.cuda:
+            arr = arr.cuda()
         arr[intT] = 1
 
         return arr
@@ -331,12 +334,15 @@ class ManifoldModel(nn.Module):
         eval_joint_dict = {}
         val_actors = self.obj_embedder(
             torch.LongTensor([0, 1, 2, 3, 4, 5, 6]))
+        if self.args.cuda:
+            val_actors = val_actors.cuda()
+
         for i in range(len(val_actors)):
             for j in range(len(self.valid_action)):
                 joint_aa = int('{}{}'.format(i+1, j+1))
                 if joint_aa in self.valid:
                     eval_joint_dict[self.valid[joint_aa]] = torch.bmm(torch.stack(
-                        [self.action_ops[j]]), val_actors[i:i+1].unsqueeze(2)).squeeze()
+                        [self.compose_action(self.inter_action_ops, self.int2hot(j, len(self.valid_action)))]), val_actors[i:i+1].unsqueeze(2)).squeeze()
 
         list_res = []
         for i in range(43):

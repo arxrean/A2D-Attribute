@@ -2,6 +2,8 @@ import torch.nn as nn
 import torch
 import torch.optim as optim
 
+import pdb
+
 
 def get_optimizer(args, model, epoch):
     lr = args.lr*(args.lr_dec**epoch)
@@ -31,18 +33,26 @@ def get_finetune_optimizer(args, model):
                 len(last_bias_list)]) == len(list(model.named_parameters()))
 
     return optim.Adam([{'params': weight_list, 'lr': lr},
-                       {'params': bias_list, 'lr': lr*2},
+                       {'params': bias_list, 'lr': lr},
                        {'params': last_weight_list, 'lr': lr*10},
-                       {'params': last_bias_list, 'lr': lr*20}], weight_decay=args.wt_dec)
+                       {'params': last_bias_list, 'lr': lr*10}], weight_decay=args.wt_dec)
 
 
 def get_op_optimizer(args, model):
+    # pdb.set_trace()
     attr_params = [param for name, param in model.named_parameters(
-    ) if 'attr_op' in name and param.requires_grad]
-    other_params = [param for name, param in model.named_parameters(
-    ) if 'attr_op' not in name and param.requires_grad]
+    ) if 'inter_action_ops' in name and param.requires_grad]
+    meta_params = [param for name, param in model.named_parameters(
+    ) if 'gen_action_ops' in name and param.requires_grad]
+    actor_params = [param for name, param in model.named_parameters(
+    ) if 'obj_embedder' in name and param.requires_grad]
+    img_params = [param for name, param in model.named_parameters(
+    ) if 'image_embedder' in name and param.requires_grad]
     optim_params = [{'params': attr_params,
-                     'lr': 0.1*args.lr}, {'params': other_params}]
+                     'lr': 0.1*args.lr}, {'params': meta_params, 'lr': 10*args.lr}, {'params': actor_params}, {'params': img_params}]
+
+    assert sum([len(attr_params), len(meta_params), len(actor_params), len(img_params)]) == len(
+        [param for name, param in model.named_parameters() if param.requires_grad])
     optimizer = optim.Adam(optim_params, lr=args.lr, weight_decay=args.wt_dec)
 
     return optimizer
